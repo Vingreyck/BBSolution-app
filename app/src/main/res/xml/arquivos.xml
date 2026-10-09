@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    O que o app da câmera pode gravar: só a pasta das capturas cruas, no
+    cache. A foto pronta (reduzida e endireitada) mora em files/os/ e não é
+    compartilhada com ninguém.
+-->
+<paths>
+    <cache-path name="camera" path="camera/" />
+</paths>

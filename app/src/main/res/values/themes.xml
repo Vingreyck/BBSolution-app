@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- As cores de verdade moram no Compose (nucleo/design/tema). Isto é só a janela. -->
+    <style name="Theme.Selebi" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!--
+        Tela de abertura (API de splash do Android 12, com compatibilidade para
+        trás). Fica na tela enquanto o app lê a sessão guardada — e sai direto
+        para as ordens de serviço, sem passar pelo login, se ela existir.
+    -->
+    <style name="Theme.Selebi.Inicio" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/selebi_cobre</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.Selebi</item>
+    </style>
+</resources>

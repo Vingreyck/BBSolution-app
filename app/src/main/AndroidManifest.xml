@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <!--
+        Onde o atendimento começou e terminou — o "no mapa" do histórico da OS.
+        Pedida só na hora de sair para o local, e o app funciona sem ela.
+    -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <!--
+        O rastreamento em campo roda num serviço em primeiro plano, com
+        notificação fixa, só entre o "Estou a caminho" e o fim do atendimento.
+        Por ser iniciado com o app aberto, basta a localização "durante o uso":
+        o app nunca pede localização em segundo plano (ACCESS_BACKGROUND_LOCATION).
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!--
+        Sem permissão de câmera de propósito: a foto é tirada pelo app de câmera
+        do celular, que devolve o arquivo. Declarar CAMERA aqui obrigaria a pedir
+        a permissão mesmo sem usar a câmera diretamente.
+    -->
+
+    <!--
+        Android 11+ esconde os outros apps de quem não declarar o que vai abrir.
+        Sem isto, "Ligar" e "Rota" falham em silêncio — foi exatamente o que
+        aconteceu no SeeNet ("Não foi possível abrir o discador").
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.DIAL" />
+            <data android:scheme="tel" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="text/plain" />
+        </intent>
+    </queries>
+
+    <!--
+        Sem backup em nuvem: a sessão fica cifrada com uma chave presa ao
+        Keystore deste aparelho, e restaurada em outro celular ela não abriria
+        — viraria só lixo que derruba o login.
+    -->
+    <application
+        android:name=".SelebiApp"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Selebi"
+        tools:targetApi="33">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Selebi.Inicio"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".nucleo.rastreio.ServicoRastreamento"
+            android:exported="false"
+            android:foregroundServiceType="location" />
+
+        <!-- Entrega à câmera um endereço onde gravar a foto (res/xml/arquivos.xml). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.arquivos"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/arquivos" />
+        </provider>
+
+        <!--
+            O WorkManager é montado pelo SelebiApp, com a fábrica do Hilt; o
+            inicializador automático sairia na frente, sem ela.
+        -->
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:authorities="${applicationId}.androidx-startup"
+            android:exported="false"
+            tools:node="merge">
+            <meta-data
+                android:name="androidx.work.WorkManagerInitializer"
+                android:value="androidx.startup"
+                tools:node="remove" />
+        </provider>
+
+        <!--
+            O leitor de código de barras do Google Play vem junto com a
+            instalação, e não na primeira leitura — que costuma ser no telhado,
+            sem sinal para baixar nada.
+        -->
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="barcode_ui" />
+    </application>
+
+</manifest>

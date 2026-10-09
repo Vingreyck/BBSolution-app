@@ -1,0 +1,23 @@
+# Android Studio / Gradle
+*.iml
+.gradle/
+.idea/
+.kotlin/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+.DS_Store
+
+# Da máquina de cada um: caminho do SDK e endereço local da API.
+local.properties
+
+# Chave de assinatura do app e senhas dela — nunca no Git.
+# Se vazarem, qualquer um publica uma "atualização" do BBSolution.
+*.jks
+*.keystore
+keystore.properties
+
+# Configuração do Firebase (quando o push entrar): fica fora por ser da conta da empresa.
+google-services.json
+GoogleService-Info.plist

@@ -1,0 +1,4 @@
+<resources>
+    <!-- O debug instala ao lado do oficial (applicationIdSuffix .debug); o nome diferencia. -->
+    <string name="app_name">Selebi Dev</string>
+</resources>

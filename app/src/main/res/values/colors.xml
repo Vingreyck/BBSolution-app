@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Só o que o sistema desenha antes do Compose: ícone e tela de abertura. -->
+    <color name="selebi_cobre">#A8521F</color>
+</resources>

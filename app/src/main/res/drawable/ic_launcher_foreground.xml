@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    O sol do Selebi. Tudo cabe na zona segura de 66dp no centro dos 108dp do
+    ícone adaptativo: os raios terminam a 23dp do centro.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M43,54a11,11 0,1 0,22 0a11,11 0,1 0,-22 0z" />
+    <path
+        android:pathData="M54,38L54,31M54,70L54,77M38,54L31,54M70,54L77,54M65.3,42.7L70.3,37.7M42.7,42.7L37.7,37.7M65.3,65.3L70.3,70.3M42.7,65.3L37.7,70.3"
+        android:strokeWidth="3.6"
+        android:strokeColor="#FFFFFF"
+        android:strokeLineCap="round" />
+</vector>

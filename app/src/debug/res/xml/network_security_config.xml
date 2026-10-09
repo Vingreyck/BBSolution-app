@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Debug: libera HTTP para falar com o `npm run dev` do computador (10.0.2.2
+    no emulador, ou o IP da rede num celular). Só existe no build de debug —
+    o de release usa o arquivo de `main`, que exige HTTPS.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
