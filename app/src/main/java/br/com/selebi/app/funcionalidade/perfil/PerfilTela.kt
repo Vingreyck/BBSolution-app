@@ -3,6 +3,8 @@ package br.com.selebi.app.funcionalidade.perfil
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +16,7 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.Badge
 import androidx.compose.material.icons.outlined.Business
+import androidx.compose.material.icons.outlined.DeleteForever
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material3.AlertDialog
@@ -50,13 +53,17 @@ import br.com.selebi.app.nucleo.dados.FilaEnvio
 import br.com.selebi.app.nucleo.dados.SessaoRepository
 import br.com.selebi.app.nucleo.design.componentes.Avatar
 import br.com.selebi.app.nucleo.design.componentes.BlocoDetalhe
+import br.com.selebi.app.nucleo.design.componentes.CampoSenha
 import br.com.selebi.app.nucleo.design.componentes.ItemDetalhe
 import br.com.selebi.app.nucleo.design.componentes.SeloPapel
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
 import br.com.selebi.app.nucleo.modelo.Usuario
+import br.com.selebi.app.nucleo.rede.Resultado
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -75,19 +82,60 @@ class PerfilViewModel @Inject constructor(private val sessao: SessaoRepository, 
     fun sair() {
         viewModelScope.launch { sessao.sair() }
     }
+
+    private val _exclusao = MutableStateFlow(EstadoExclusao())
+    val exclusao: StateFlow<EstadoExclusao> = _exclusao.asStateFlow()
+
+    /** Deu certo: a sessão acaba e a navegação volta sozinha para o login. */
+    fun excluirConta(senha: String) {
+        if (_exclusao.value.enviando) return
+        _exclusao.value = EstadoExclusao(enviando = true)
+        viewModelScope.launch {
+            _exclusao.value = when (val r = sessao.excluirConta(senha)) {
+                is Resultado.Ok -> EstadoExclusao()
+                is Resultado.Falha -> EstadoExclusao(erro = r.erro.mensagem)
+            }
+        }
+    }
+
+    fun limparErroExclusao() {
+        _exclusao.value = _exclusao.value.copy(erro = null)
+    }
 }
+
+data class EstadoExclusao(val enviando: Boolean = false, val erro: String? = null)
 
 @Composable
 fun PerfilTela(aoTrocarSenha: () -> Unit, vm: PerfilViewModel = hiltViewModel()) {
     val usuario by vm.usuario.collectAsStateWithLifecycle()
     val pendentes by vm.enviosPendentes.collectAsStateWithLifecycle()
-    usuario?.let { PerfilConteudo(it, aoTrocarSenha, vm::sair, pendentes) }
+    val exclusao by vm.exclusao.collectAsStateWithLifecycle()
+    usuario?.let {
+        PerfilConteudo(
+            usuario = it,
+            aoTrocarSenha = aoTrocarSenha,
+            aoSair = vm::sair,
+            enviosPendentes = pendentes,
+            exclusao = exclusao,
+            aoExcluir = vm::excluirConta,
+            aoDigitarSenhaExclusao = vm::limparErroExclusao,
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PerfilConteudo(usuario: Usuario, aoTrocarSenha: () -> Unit, aoSair: () -> Unit, enviosPendentes: Int = 0) {
+fun PerfilConteudo(
+    usuario: Usuario,
+    aoTrocarSenha: () -> Unit,
+    aoSair: () -> Unit,
+    enviosPendentes: Int = 0,
+    exclusao: EstadoExclusao = EstadoExclusao(),
+    aoExcluir: (senha: String) -> Unit = {},
+    aoDigitarSenhaExclusao: () -> Unit = {},
+) {
     var confirmarSaida by rememberSaveable { mutableStateOf(false) }
+    var confirmarExclusao by rememberSaveable { mutableStateOf(false) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -125,6 +173,14 @@ fun PerfilConteudo(usuario: Usuario, aoTrocarSenha: () -> Unit, aoSair: () -> Un
                     cor = MaterialTheme.colorScheme.error,
                 )
             }
+            BlocoDetalhe("Privacidade") {
+                LinhaAcao(
+                    Icons.Outlined.DeleteForever,
+                    "Excluir minha conta",
+                    { confirmarExclusao = true },
+                    cor = MaterialTheme.colorScheme.error,
+                )
+            }
             Text(
                 "BBSolution para Android · versão ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.bodySmall,
@@ -133,6 +189,15 @@ fun PerfilConteudo(usuario: Usuario, aoTrocarSenha: () -> Unit, aoSair: () -> Un
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+    }
+
+    if (confirmarExclusao) {
+        DialogoExclusao(
+            exclusao = exclusao,
+            aoExcluir = aoExcluir,
+            aoDigitar = aoDigitarSenhaExclusao,
+            aoFechar = { confirmarExclusao = false },
+        )
     }
 
     if (confirmarSaida) {
@@ -167,6 +232,50 @@ fun PerfilConteudo(usuario: Usuario, aoTrocarSenha: () -> Unit, aoSair: () -> Un
             dismissButton = { TextButton(onClick = { confirmarSaida = false }) { Text("Cancelar") } },
         )
     }
+}
+
+@Composable
+private fun DialogoExclusao(
+    exclusao: EstadoExclusao,
+    aoExcluir: (senha: String) -> Unit,
+    aoDigitar: () -> Unit,
+    aoFechar: () -> Unit,
+) {
+    var senha by rememberSaveable { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = { if (!exclusao.enviando) aoFechar() },
+        icon = { Icon(Icons.Outlined.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
+        title = { Text("Excluir a sua conta?") },
+        text = {
+            Column {
+                Text(
+                    "Seu nome, CPF, e-mail, telefone e o histórico de GPS são apagados, e você não consegue mais entrar. " +
+                        "As ordens de serviço que você atendeu continuam na empresa, sem o seu nome. Não dá para desfazer.",
+                )
+                Spacer(Modifier.height(16.dp))
+                CampoSenha(
+                    valor = senha,
+                    aoMudar = {
+                        senha = it
+                        aoDigitar()
+                    },
+                    rotulo = "Sua senha, para confirmar",
+                    erro = exclusao.erro,
+                    aoConfirmar = { if (senha.isNotBlank()) aoExcluir(senha) },
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { aoExcluir(senha) },
+                enabled = senha.isNotBlank() && !exclusao.enviando,
+                colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+            ) { Text(if (exclusao.enviando) "Excluindo…" else "Excluir conta") }
+        },
+        dismissButton = {
+            TextButton(onClick = aoFechar, enabled = !exclusao.enviando) { Text("Cancelar") }
+        },
+    )
 }
 
 @Composable

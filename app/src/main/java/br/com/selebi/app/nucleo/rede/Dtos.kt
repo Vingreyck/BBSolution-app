@@ -58,6 +58,12 @@ data class EuResposta(val usuario: UsuarioDto)
 data class TrocarSenhaPedido(val atual: String, val nova: String)
 
 @Serializable
+data class ExcluirContaPedido(val senha: String)
+
+@Serializable
+data class ExclusaoResposta(val excluida: Boolean)
+
+@Serializable
 data class ClienteDto(
     val id: String,
     val nome: String,

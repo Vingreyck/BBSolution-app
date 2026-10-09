@@ -26,6 +26,8 @@ import br.com.selebi.app.nucleo.rede.RespostaPedido
 import br.com.selebi.app.nucleo.rede.SelebiApi
 import br.com.selebi.app.nucleo.rede.SenhaProvisoriaResposta
 import br.com.selebi.app.nucleo.rede.TrilhaDto
+import br.com.selebi.app.nucleo.rede.ExcluirContaPedido
+import br.com.selebi.app.nucleo.rede.ExclusaoResposta
 import br.com.selebi.app.nucleo.rede.TrocarSenhaPedido
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
@@ -89,6 +91,7 @@ internal class ApiFalsa : SelebiApi {
     override suspend fun sair(): Response<Unit> = error("")
     override suspend fun eu(): EuResposta = error("")
     override suspend fun trocarSenha(pedido: TrocarSenhaPedido): EuResposta = error("")
+    override suspend fun excluirConta(pedido: ExcluirContaPedido): ExclusaoResposta = error("")
     override suspend fun ordens(): OrdensResposta = error("")
     override suspend fun removerAnexo(id: String, anexoId: String): OrdemTalvezResposta = error("")
     override suspend fun baixarAnexo(id: String, anexoId: String): ResponseBody = error("")

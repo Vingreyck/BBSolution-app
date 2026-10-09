@@ -66,6 +66,11 @@ class PreferenciasApp @Inject constructor(@ApplicationContext private val contex
         contexto.preferencias.edit { it[Chaves.ultimoCpf] = cpf }
     }
 
+    /** A conta foi excluída: o CPF não fica pré-preenchido no login. */
+    suspend fun esquecerCpf() {
+        contexto.preferencias.edit { it.remove(Chaves.ultimoCpf) }
+    }
+
     val sincronizadoEm: Flow<Instant?> = contexto.preferencias.data.map { p ->
         p[Chaves.sincronizadoEm]?.let(Instant::ofEpochMilli)
     }

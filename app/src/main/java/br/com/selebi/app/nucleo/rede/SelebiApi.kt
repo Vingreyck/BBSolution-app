@@ -35,6 +35,9 @@ interface SelebiApi {
     @POST("eu/senha")
     suspend fun trocarSenha(@Body pedido: TrocarSenhaPedido): EuResposta
 
+    @POST("eu/excluir")
+    suspend fun excluirConta(@Body pedido: ExcluirContaPedido): ExclusaoResposta
+
     @GET("ordens")
     suspend fun ordens(): OrdensResposta
 

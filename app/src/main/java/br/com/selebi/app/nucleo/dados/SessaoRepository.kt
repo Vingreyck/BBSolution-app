@@ -13,6 +13,7 @@ import br.com.selebi.app.nucleo.rede.CodigoEmpresaPedido
 import br.com.selebi.app.nucleo.rede.Dispositivo
 import br.com.selebi.app.nucleo.rede.ErroApp
 import br.com.selebi.app.nucleo.rede.EventosSessao
+import br.com.selebi.app.nucleo.rede.ExcluirContaPedido
 import br.com.selebi.app.nucleo.rede.ExecutorApi
 import br.com.selebi.app.nucleo.rede.LoginPedido
 import br.com.selebi.app.nucleo.rede.PortadorToken
@@ -40,6 +41,9 @@ sealed interface EstadoSessao {
 
     data class Logado(val usuario: Usuario) : EstadoSessao
 }
+
+/** Id que não é de usuário nenhum: "descartar de outros que não ele" descarta tudo. */
+private const val NINGUEM = ""
 
 /**
  * Quem está usando o app, e as portas de entrada e saída.
@@ -165,6 +169,25 @@ class SessaoRepository @Inject constructor(
         val resultado = executor.executar { api.trocarSenha(TrocarSenhaPedido(atual, nova)) }
         if (resultado !is Resultado.Ok) return resultado as Resultado.Falha
         guardarUsuario(resultado.valor.usuario)
+        return Resultado.Ok(Unit)
+    }
+
+    /**
+     * "Excluir minha conta" — exigência da Apple e da Google.
+     *
+     * Ao contrário do sair, precisa do servidor: sem sinal, nada é apagado e a
+     * pessoa continua dentro, com a mensagem de erro. Depois de apagada lá, este
+     * celular esquece tudo dela, inclusive a fila: a conta não existe mais, e o
+     * que estava esperando sinal não tem em nome de quem subir.
+     */
+    suspend fun excluirConta(senha: String): Resultado<Unit> {
+        val resultado = executor.executar { api.excluirConta(ExcluirContaPedido(senha)) }
+        if (resultado !is Resultado.Ok) return resultado as Resultado.Falha
+        // "De outros que não ninguém" = de todo mundo.
+        fila.descartarDeOutros(NINGUEM)
+        posicoes.descartarDeOutros(NINGUEM)
+        preferencias.esquecerCpf()
+        encerrarLocal()
         return Resultado.Ok(Unit)
     }
 
