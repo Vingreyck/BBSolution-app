@@ -2,6 +2,9 @@ package br.com.selebi.app.nucleo.dados
 
 import androidx.room.Room
 import br.com.selebi.app.nucleo.arquivos.ArquivosOs
+import br.com.selebi.app.nucleo.arquivos.PastasApp
+import br.com.selebi.app.nucleo.arquivos.ProcessadorFotosAndroid
+import br.com.selebi.app.nucleo.rede.ErroHttp
 import br.com.selebi.app.nucleo.banco.PendenteEntidade
 import br.com.selebi.app.nucleo.banco.SelebiBanco
 import br.com.selebi.app.nucleo.banco.paraModelo
@@ -40,14 +43,10 @@ import br.com.selebi.app.nucleo.rede.SelebiApi
 import br.com.selebi.app.nucleo.rede.SenhaProvisoriaResposta
 import br.com.selebi.app.nucleo.rede.TrocarSenhaPedido
 import br.com.selebi.app.nucleo.rede.paraJson
+import br.com.selebi.app.nucleo.util.Datas
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonPrimitive
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.MultipartBody
-import okhttp3.RequestBody
-import okhttp3.ResponseBody
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -60,11 +59,9 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
-import retrofit2.HttpException
-import retrofit2.Response
 import java.io.File
 import java.io.IOException
-import java.time.Instant
+import kotlinx.datetime.Instant
 import java.util.UUID
 
 /**
@@ -92,7 +89,7 @@ class FilaEnvioTest {
     fun montar() {
         val contexto = RuntimeEnvironment.getApplication()
         banco = Room.inMemoryDatabaseBuilder(contexto, SelebiBanco::class.java).allowMainThreadQueries().build()
-        arquivos = ArquivosOs(contexto)
+        arquivos = ArquivosOs(PastasApp(contexto.filesDir.path, contexto.cacheDir.path), ProcessadorFotosAndroid(contexto))
         copia = CopiaLocal(banco, banco.ordens(), banco.pendentes(), arquivos, json)
         fila = FilaEnvio(
             banco, banco.pendentes(), banco.ordens(), banco.avisos(), copia, api, ExecutorApi(json), arquivos, json,
@@ -134,7 +131,7 @@ class FilaEnvioTest {
         ordemId = "os1",
         usuarioId = usuario,
         tipo = TipoPendente.RESPOSTA,
-        corpoJson = json.encodeToString(RespostaPedido.serializer(), RespostaPedido(valor.paraJson(), null, Instant.now().toString())),
+        corpoJson = json.encodeToString(RespostaPedido.serializer(), RespostaPedido(valor.paraJson(), null, Datas.agoraMesmo().toString())),
         itemId = itemId,
         criadoEm = relogio++,
     )
@@ -156,7 +153,7 @@ class FilaEnvioTest {
             ordemId = "os1",
             usuarioId = "u1",
             tipo = TipoPendente.ANEXO,
-            corpoJson = json.encodeToString(AnexoNaFila.serializer(), AnexoNaFila("foto", itemId, Instant.now().toString())),
+            corpoJson = json.encodeToString(AnexoNaFila.serializer(), AnexoNaFila("foto", itemId, Datas.agoraMesmo().toString())),
             itemId = itemId,
             arquivo = arquivo.path,
             criadoEm = relogio++,
@@ -165,9 +162,8 @@ class FilaEnvioTest {
 
     private suspend fun ordem(): Ordem = banco.ordens().buscar("os1")!!.paraModelo()
 
-    private fun recusa(status: Int, erro: String, mensagem: String): HttpException = HttpException(
-        Response.error<Any>(status, """{"erro":"$erro","mensagem":"$mensagem"}""".toResponseBody("application/json".toMediaType())),
-    )
+    private fun recusa(status: Int, erro: String, mensagem: String): ErroHttp =
+        ErroHttp(status, """{"erro":"$erro","mensagem":"$mensagem"}""")
 
     // --- o que vale na tela -------------------------------------------------------
 

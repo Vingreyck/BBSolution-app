@@ -1,6 +1,8 @@
 package br.com.selebi.app.funcionalidade.ordens
 
 import br.com.selebi.app.amostras.Amostras
+import br.com.selebi.app.amostras.minusDays
+import br.com.selebi.app.amostras.withHour
 import br.com.selebi.app.nucleo.modelo.StatusOs
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

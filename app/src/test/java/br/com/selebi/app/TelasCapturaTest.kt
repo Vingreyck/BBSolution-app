@@ -45,6 +45,8 @@ import br.com.selebi.app.nucleo.modelo.TrilhaCampo
 import br.com.selebi.app.nucleo.modelo.Usuario
 import br.com.selebi.app.navegacao.BarraDeBaixo
 import br.com.selebi.app.navegacao.Destino
+import br.com.selebi.app.nucleo.util.Datas
+import br.com.selebi.app.nucleo.util.plusDays
 import com.github.takahirom.roborazzi.ExperimentalRoborazziApi
 import com.github.takahirom.roborazzi.captureRoboImage
 import com.github.takahirom.roborazzi.captureScreenRoboImage
@@ -82,7 +84,7 @@ class TelasCapturaTest {
     /** A tela dentro do app: com a barra de baixo e só as abas que o papel vê. */
     @Composable
     private fun NaCasca(aba: Destino, usuario: Usuario = Amostras.usuario, conteudo: @Composable () -> Unit) {
-        val destinos = Destino.entries.filter { it.permissao == null || usuario.pode(it.permissao) }
+        val destinos = Destino.entries.filter { d -> d.permissao.let { it == null || usuario.pode(it) } }
         Scaffold(
             bottomBar = { BarraDeBaixo(destinos, marcado = { it == aba }, aoIr = {}) },
             contentWindowInsets = WindowInsets(0),
@@ -335,15 +337,15 @@ class TelasCapturaTest {
     @Composable
     private fun AgendaAmostra() {
         val ordens = Amostras.ordens()
-        val dia = Amostras.agora.toLocalDate()
-        val segunda = dia.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY))
+        val dia = Amostras.agora.date
+        val segunda = Datas.segundaDaSemana(dia)
         AgendaConteudo(
             AgendaEstado(
                 selecionado = dia,
                 semana = (0L..6L).map { segunda.plusDays(it) }.map { d ->
-                    DiaDaSemana(d, ordens.count { it.agendadaPara?.toLocalDate() == d })
+                    DiaDaSemana(d, ordens.count { it.agendadaPara?.date == d })
                 },
-                doDia = ordens.filter { it.agendadaPara?.toLocalDate() == dia },
+                doDia = ordens.filter { it.agendadaPara?.date == dia },
                 semData = 2,
                 mostrarResponsavel = true,
                 agora = Amostras.agora,

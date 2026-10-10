@@ -1,7 +1,6 @@
 package br.com.selebi.app.nucleo.dados
 
 import android.content.Context
-import androidx.hilt.work.HiltWorker
 import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
@@ -11,43 +10,28 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
-import br.com.selebi.app.nucleo.rastreio.EnvioPosicoes
-import dagger.Binds
-import dagger.Module
-import dagger.assisted.Assisted
-import dagger.assisted.AssistedInject
-import dagger.hilt.InstallIn
-import dagger.hilt.android.qualifiers.ApplicationContext
-import dagger.hilt.components.SingletonComponent
+import br.com.selebi.app.SelebiApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
-import javax.inject.Inject
-import javax.inject.Singleton
 
 /**
  * Sobe a fila quando há rede — com o app aberto, fechado ou com o celular no
  * bolso. É o WorkManager quem espera o sinal voltar e quem tenta de novo
  * depois de uma queda, com intervalo crescente.
  */
-@HiltWorker
-class EnvioWorker @AssistedInject constructor(
-    @Assisted contexto: Context,
-    @Assisted parametros: WorkerParameters,
-    private val fila: FilaEnvio,
-    private val posicoes: EnvioPosicoes,
-    private val sessao: SessaoRepository,
-) : CoroutineWorker(contexto, parametros) {
+class EnvioWorker(contexto: Context, parametros: WorkerParameters) : CoroutineWorker(contexto, parametros) {
 
     override suspend fun doWork(): Result {
+        val nucleo = (applicationContext as SelebiApp).nucleo
         // Sem ninguém logado a fila espera: o login agenda o envio de novo.
-        val usuario = sessao.usuarioAtual() ?: return Result.success()
-        val daFila = fila.enviar(usuario.id)
+        val usuario = nucleo.sessao.usuarioAtual() ?: return Result.success()
+        val daFila = nucleo.fila.enviar(usuario.id)
         if (daFila == ResultadoEnvio.SEM_SESSAO) return Result.success()
         // As posições do rastreamento que ficaram sem sinal, independentes da
         // ordem das ações — sobem mesmo se algo da fila estiver esperando.
-        val trajeto = posicoes.enviar(usuario.id)
+        val trajeto = nucleo.posicoes.enviar(usuario.id)
         return if (daFila == ResultadoEnvio.TENTAR_DE_NOVO || trajeto == ResultadoEnvio.TENTAR_DE_NOVO) Result.retry() else Result.success()
     }
 
@@ -56,10 +40,9 @@ class EnvioWorker @AssistedInject constructor(
     }
 }
 
-@Singleton
-class AgendadorWorkManager @Inject constructor(
-    @ApplicationContext private val contexto: Context,
-    @EscopoApp private val escopo: CoroutineScope,
+class AgendadorWorkManager(
+    private val contexto: Context,
+    private val escopo: CoroutineScope,
 ) : AgendadorEnvio {
 
     override fun agendar() {
@@ -79,11 +62,4 @@ class AgendadorWorkManager @Inject constructor(
             trabalho.enqueueUniqueWork(EnvioWorker.NOME, ExistingWorkPolicy.APPEND_OR_REPLACE, pedido)
         }
     }
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-abstract class ModuloEnvio {
-    @Binds
-    abstract fun agendador(impl: AgendadorWorkManager): AgendadorEnvio
 }

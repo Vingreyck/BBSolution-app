@@ -7,7 +7,8 @@ import br.com.selebi.app.amostras.AmostrasExecucao
 import br.com.selebi.app.nucleo.banco.PosicaoEntidade
 import br.com.selebi.app.nucleo.banco.SelebiBanco
 import br.com.selebi.app.nucleo.dados.ApiFalsa
-import br.com.selebi.app.nucleo.dados.Localizacao
+import br.com.selebi.app.nucleo.dados.LocalizacaoAndroid
+import br.com.selebi.app.nucleo.rede.ErroHttp
 import br.com.selebi.app.nucleo.dados.ResultadoEnvio
 import br.com.selebi.app.nucleo.modelo.ModoRastreio
 import br.com.selebi.app.nucleo.modelo.StatusOs
@@ -15,8 +16,6 @@ import br.com.selebi.app.nucleo.rede.ExecutorApi
 import br.com.selebi.app.nucleo.rede.ModuloRede
 import br.com.selebi.app.nucleo.rede.PosicoesResposta
 import kotlinx.coroutines.runBlocking
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.ResponseBody.Companion.toResponseBody
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -28,8 +27,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
-import retrofit2.HttpException
-import retrofit2.Response
 import java.io.IOException
 
 /**
@@ -43,16 +40,16 @@ class RastreioTest {
     private lateinit var banco: SelebiBanco
     private lateinit var envio: EnvioPosicoes
     private lateinit var rastreador: Rastreador
-    private lateinit var memoria: MemoriaRastreio
+    private lateinit var memoria: MemoriaRastreioAndroid
     private val api = ApiFalsa()
 
     @Before
     fun montar() {
         banco = Room.inMemoryDatabaseBuilder(contexto, SelebiBanco::class.java).allowMainThreadQueries().build()
         envio = EnvioPosicoes(banco.posicoes(), api, ExecutorApi(ModuloRede.json()))
-        memoria = MemoriaRastreio(contexto)
+        memoria = MemoriaRastreioAndroid(contexto)
         memoria.apagar()
-        rastreador = Rastreador(contexto, memoria, Localizacao(contexto))
+        rastreador = Rastreador(memoria, LocalizacaoAndroid(contexto), MotorRastreioAndroid(contexto))
     }
 
     @After
@@ -169,7 +166,7 @@ class RastreioTest {
     fun `sessao vencida guarda as posicoes para depois`() = runBlocking {
         repeat(3) { envio.guardar(ponto(it)) }
         api.aoEnviarPosicoes = {
-            throw HttpException(Response.error<Any>(401, """{"erro":"nao_autenticado","mensagem":"Entre de novo."}""".toResponseBody("application/json".toMediaType())))
+            throw ErroHttp(401, """{"erro":"nao_autenticado","mensagem":"Entre de novo."}""")
         }
         assertEquals(ResultadoEnvio.SEM_SESSAO, envio.enviar("u2"))
         assertEquals(3, banco.posicoes().contar("u2"))
@@ -179,7 +176,7 @@ class RastreioTest {
     fun `lote recusado e descartado para nao travar os seguintes`() = runBlocking {
         repeat(3) { envio.guardar(ponto(it)) }
         api.aoEnviarPosicoes = {
-            throw HttpException(Response.error<Any>(400, """{"erro":"validacao","mensagem":"x"}""".toResponseBody("application/json".toMediaType())))
+            throw ErroHttp(400, """{"erro":"validacao","mensagem":"x"}""")
         }
         assertEquals(ResultadoEnvio.TUDO_ENVIADO, envio.enviar("u2"))
         assertEquals(0, banco.posicoes().contar("u2"))

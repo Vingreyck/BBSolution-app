@@ -5,7 +5,8 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.datetime.Instant
 
 /**
  * As regras do rastreamento no app. O frescor tem o gêmeo no servidor
@@ -14,7 +15,7 @@ import java.time.Instant
  */
 class CampoTest {
     private val agora = Instant.parse("2026-09-25T13:00:00Z")
-    private fun ha(segundos: Long) = agora.minusSeconds(segundos)
+    private fun ha(segundos: Long) = agora - segundos.seconds
 
     @Test
     fun `frescor a caminho - 30 s ao vivo, 2 min atrasado, depois sem sinal`() {

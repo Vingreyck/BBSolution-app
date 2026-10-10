@@ -10,7 +10,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import java.time.Instant
+import kotlinx.datetime.Instant
 
 /** O wizard sem tela: quais passos, onde abre, para onde pula. */
 class RoteiroTest {
@@ -79,7 +79,7 @@ class RoteiroTest {
     @Test
     fun `fila em palavras`() {
         fun envio(tipo: TipoEnvio, itemId: String? = null, acao: AcaoOs? = null) =
-            Envio("x", emCampo.id, tipo, itemId, acao, Instant.EPOCH, null)
+            Envio("x", emCampo.id, tipo, itemId, acao, Instant.fromEpochSeconds(0), null)
         assertEquals("Foto · Disjuntor do padrão — amperagem", Roteiro.descrever(envio(TipoEnvio.FOTO, "v05"), emCampo))
         assertEquals("Conclusão da OS", Roteiro.descrever(envio(TipoEnvio.ACAO, acao = AcaoOs.CONCLUIR), emCampo))
         assertEquals("Assinatura do cliente", Roteiro.descrever(envio(TipoEnvio.ASSINATURA), emCampo))

@@ -21,13 +21,12 @@ import androidx.core.location.LocationManagerCompat
 import androidx.core.location.LocationRequestCompat
 import br.com.selebi.app.MainActivity
 import br.com.selebi.app.R
+import br.com.selebi.app.SelebiApp
 import br.com.selebi.app.nucleo.banco.PosicaoEntidade
 import br.com.selebi.app.nucleo.dados.AgendadorEnvio
-import br.com.selebi.app.nucleo.dados.Localizacao
 import br.com.selebi.app.nucleo.dados.ResultadoEnvio
 import br.com.selebi.app.nucleo.modelo.Campo
 import br.com.selebi.app.nucleo.modelo.ModoRastreio
-import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -38,7 +37,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
-import javax.inject.Inject
 
 /**
  * O GPS do técnico em campo, com o app aberto, minimizado ou com a tela
@@ -53,16 +51,13 @@ import javax.inject.Inject
  * o Android matar o serviço, ele volta sozinho (START_STICKY) e lê o que estava
  * fazendo na [MemoriaRastreio].
  */
-@AndroidEntryPoint
 class ServicoRastreamento : Service() {
 
-    @Inject lateinit var memoria: MemoriaRastreio
-
-    @Inject lateinit var envio: EnvioPosicoes
-
-    @Inject lateinit var localizacao: Localizacao
-
-    @Inject lateinit var agendador: AgendadorEnvio
+    private val nucleo get() = (application as SelebiApp).nucleo
+    private val memoria get() = nucleo.memoriaRastreio
+    private val envio get() = nucleo.posicoes
+    private val localizacao get() = nucleo.localizacao
+    private val agendador: AgendadorEnvio get() = nucleo.agendador
 
     private val escopo = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var estado: EstadoRastreio? = null
