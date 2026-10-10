@@ -1,12 +1,10 @@
 import java.util.Properties
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.ksp)
-    alias(libs.plugins.hilt)
 }
 
 /**
@@ -35,8 +33,7 @@ android {
 
     defaultConfig {
         applicationId = "br.com.selebi.app"
-        // Android 8.0+. Abaixo disso sobra menos de 1% dos celulares em uso no
-        // Brasil, e é o que permite usar java.time sem desugaring.
+        // Android 8.0+. Abaixo disso sobra menos de 1% dos celulares em uso no Brasil.
         minSdk = 26
         targetSdk = 36
         versionCode = 5
@@ -76,9 +73,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = "17"
-    }
     buildFeatures {
         compose = true
         buildConfig = true
@@ -99,61 +93,26 @@ android {
     }
 }
 
-ksp {
-    // Esquema do banco local versionado junto do código: é o que permite
-    // escrever a migração quando a tabela mudar, em vez de apagar os dados do
-    // técnico a cada versão.
-    arg("room.schemaLocation", "$projectDir/schemas")
+kotlin {
+    compilerOptions {
+        jvmTarget.set(JvmTarget.JVM_17)
+        optIn.add("kotlin.time.ExperimentalTime")
+    }
 }
 
 dependencies {
+    // As telas, os dados e a rede: o mesmo código do iPhone.
+    implementation(project(":shared"))
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
-    implementation(libs.androidx.lifecycle.runtime.compose)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
-
-    implementation(platform(libs.androidx.compose.bom))
-    implementation(libs.androidx.compose.ui)
-    implementation(libs.androidx.compose.ui.graphics)
-    implementation(libs.androidx.compose.ui.tooling.preview)
-    implementation(libs.androidx.compose.material3)
-    implementation(libs.androidx.compose.material.icons.extended)
-    implementation(libs.androidx.navigation.compose)
-
-    implementation(libs.hilt.android)
-    ksp(libs.hilt.compiler)
-    implementation(libs.androidx.hilt.navigation.compose)
-
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
-    implementation(libs.androidx.datastore.preferences)
-    implementation(libs.tink.android)
-
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.kotlinx.serialization)
-    implementation(libs.okhttp)
-    implementation(libs.okhttp.logging)
-    implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)
     // Fila de envio da OS: sobe o que o técnico fez sem sinal quando a rede
     // volta, mesmo com o app fechado.
     implementation(libs.androidx.work.runtime)
-    implementation(libs.androidx.hilt.work)
-    ksp(libs.androidx.hilt.compiler)
-    // Rotação da foto: a câmera grava "de lado" e marca no EXIF.
-    implementation(libs.androidx.exifinterface)
-    // Leitor do código de barras da etiqueta do inversor: o serial certo sem
-    // digitar 16 caracteres em cima do telhado. Usa a tela do Google Play, sem
-    // pedir permissão de câmera.
-    implementation(libs.play.services.code.scanner)
-    // Rastreamento em campo: o mapa da gestão (OpenStreetMap, sem chave nem
-    // cobrança — a escolha do SeeNet depois de o Google Maps pedir cartão) e
-    // as posições ao vivo empurradas pelo servidor (Server-Sent Events).
-    implementation(libs.osmdroid.android)
-    implementation(libs.okhttp.sse)
 
+    implementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 

@@ -1,0 +1,6 @@
+# Gerado pelo XcodeGen a cada build (ver project.yml).
+*.xcodeproj/
+iosApp/Info.plist
+build/
+DerivedData/
+xcuserdata/

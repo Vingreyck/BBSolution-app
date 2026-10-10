@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Selebi"
 include(":app")
+include(":shared")

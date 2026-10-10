@@ -1,7 +1,7 @@
 # Regras do R8 para o build de release.
 #
-# kotlinx.serialization, Retrofit, OkHttp, Room, Hilt e Tink trazem as próprias
-# regras dentro das bibliotecas. O que sobra para cá é o que é nosso.
+# kotlinx.serialization, Ktor, OkHttp, Room, DataStore e Tink trazem as
+# próprias regras dentro das bibliotecas. O que sobra para cá é o que é nosso.
 
 # Os DTOs são lidos por reflexão do serializer gerado; mantém os companion
 # objects que o plugin cria.

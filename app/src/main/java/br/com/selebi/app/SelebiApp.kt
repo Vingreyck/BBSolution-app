@@ -1,24 +1,31 @@
 package br.com.selebi.app
 
 import android.app.Application
-import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
-import dagger.hilt.android.HiltAndroidApp
-import javax.inject.Inject
+import br.com.selebi.app.nucleo.Nucleo
+import br.com.selebi.app.nucleo.dados.AgendadorWorkManager
+import br.com.selebi.app.nucleo.montarNucleoAndroid
+import br.com.selebi.app.nucleo.plataforma.Ambiente
+import br.com.selebi.app.nucleo.rastreio.MotorRastreioAndroid
 
 /**
- * Ponto de entrada do Hilt: daqui para baixo tudo recebe dependências injetadas.
+ * O app no Android: monta o [Nucleo] — o mesmo do iPhone — com as peças
+ * daqui: o WorkManager para subir a fila e o serviço de GPS em primeiro plano.
  *
- * Também monta o WorkManager com a fábrica do Hilt — é o que deixa o envio da
- * fila receber o banco e a API injetados. Por isso o inicializador automático
- * do WorkManager sai do manifesto.
+ * Montado na primeira vez que alguém pede (a tela, o envio em segundo plano, o
+ * serviço de GPS), e não na abertura: nos testes, o app sobe sem abrir banco.
+ *
+ * O WorkManager é iniciado sob demanda por aqui (`Configuration.Provider`); o
+ * inicializador automático sai do manifesto.
  */
-@HiltAndroidApp
 class SelebiApp : Application(), Configuration.Provider {
 
-    @Inject
-    lateinit var fabricaDeTrabalhos: HiltWorkerFactory
+    val nucleo: Nucleo by lazy {
+        Ambiente.apiUrl = BuildConfig.API_URL
+        Ambiente.versao = BuildConfig.VERSION_NAME
+        montarNucleoAndroid(this, agendador = { AgendadorWorkManager(this, it.escopo) }, motor = MotorRastreioAndroid(this))
+    }
 
     override val workManagerConfiguration: Configuration
-        get() = Configuration.Builder().setWorkerFactory(fabricaDeTrabalhos).build()
+        get() = Configuration.Builder().build()
 }

@@ -1,0 +1,95 @@
+# Receitas do Codemagic (o "Mac na nuvem") para o BBSolution no iPhone.
+#
+# Lido pelo Codemagic quando o app é adicionado com a configuração por arquivo
+# (codemagic.yaml). Cada `workflow` aparece como uma opção em "Start new build".
+#
+# O projeto do Xcode não fica no Git: ele é gerado a cada build a partir de
+# iosApp/project.yml, com o XcodeGen.
+
+definitions:
+  ambiente: &ambiente
+    java: 17
+    xcode: latest
+  passos:
+    - &sdk
+      name: Apontar o SDK do Android
+      script: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+    - &memoria
+      name: Memória para o compilador do iPhone
+      # O Kotlin para iPhone pede bem mais memória que o do Android. A última
+      # linha do arquivo vence a de cima.
+      script: echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" >> gradle.properties
+    - &xcodegen
+      name: Gerar o projeto do Xcode
+      script: |
+        chmod +x gradlew
+        brew install xcodegen
+        cd iosApp
+        # Cada envio ao TestFlight precisa de um número de build novo.
+        sed -i '' "s/CURRENT_PROJECT_VERSION: \"1\"/CURRENT_PROJECT_VERSION: \"$BUILD_NUMBER\"/" project.yml
+        xcodegen generate
+
+workflows:
+  # Monta o app inteiro para o simulador, sem assinatura: não precisa de nada
+  # da Apple. É a receita para achar erro de compilação (Kotlin, Swift ou do
+  # projeto) antes de mexer com certificado.
+  iphone-simulador:
+    name: iPhone no simulador (teste de compilação)
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    environment: *ambiente
+    scripts:
+      - *sdk
+      - *memoria
+      - *xcodegen
+      - name: Compilar o app para o simulador
+        script: |
+          set -o pipefail
+          xcodebuild \
+            -project iosApp/BBSolution.xcodeproj \
+            -scheme BBSolution \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build | xcpretty || exit 1
+    artifacts:
+      - /tmp/xcodebuild_logs/*.log
+
+  # O app de verdade: assinado e enviado ao TestFlight.
+  #
+  # Antes da primeira vez (uma vez só, ver o passo a passo combinado):
+  #  - o identificador br.com.selebi.app registrado na conta da Apple, e o
+  #    app "BBSolution" criado no App Store Connect;
+  #  - em Codemagic > Team settings > codemagic.yaml settings > Code signing
+  #    identities: um certificado de distribuição (Generate) e o perfil App
+  #    Store do br.com.selebi.app (Fetch profiles);
+  #  - o nome da chave da App Store Connect (a mesma do SeeNet) no lugar de
+  #    NOME_DA_CHAVE_APP_STORE, logo abaixo.
+  iphone-testflight:
+    name: iPhone para o TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    integrations:
+      app_store_connect: NOME_DA_CHAVE_APP_STORE
+    environment:
+      java: 17
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: br.com.selebi.app
+    scripts:
+      - *sdk
+      - *memoria
+      - *xcodegen
+      - name: Assinatura
+        script: xcode-project use-profiles --project iosApp/BBSolution.xcodeproj
+      - name: Compilar e empacotar
+        script: xcode-project build-ipa --project iosApp/BBSolution.xcodeproj --scheme BBSolution
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
