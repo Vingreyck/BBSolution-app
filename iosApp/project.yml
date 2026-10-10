@@ -34,12 +34,18 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_VERSION: "5.0"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        # O script que compila o Kotlin precisa sair da caixa de areia do Xcode.
-        ENABLE_USER_SCRIPT_SANDBOXING: NO
-        # O código do app (Kotlin) chega como o framework "Shared".
-        FRAMEWORK_SEARCH_PATHS:
+        # O código do app (Kotlin) chega como o framework "Shared", compilado
+        # pelo Gradle antes do Xcode (ver codemagic.yaml): o do simulador em
+        # modo de teste, o do iPhone de verdade em modo de produção.
+        "FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]":
           - "$(inherited)"
-          - "$(SRCROOT)/../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)"
+          - "$(SRCROOT)/../shared/build/bin/iosSimulatorArm64/debugFramework"
+        "FRAMEWORK_SEARCH_PATHS[sdk=iphoneos*]":
+          - "$(inherited)"
+          - "$(SRCROOT)/../shared/build/bin/iosArm64/releaseFramework"
+        # O Kotlin sai só para os chips da Apple (arm64), que é o que os
+        # simuladores dos Macs atuais usam.
+        "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
         OTHER_LDFLAGS:
           - "$(inherited)"
           - "-framework"
@@ -78,9 +84,3 @@ targets:
           do inversor.
         NSPhotoLibraryUsageDescription: >-
           Para anexar à ordem de serviço uma foto que já está no celular.
-    preBuildScripts:
-      - name: Compilar o Kotlin
-        basedOnDependencyAnalysis: false
-        script: |
-          cd "$SRCROOT/.."
-          ./gradlew :shared:embedAndSignAppleFrameworkForXcode

@@ -18,7 +18,9 @@ definitions:
       name: Memória para o compilador do iPhone
       # O Kotlin para iPhone pede bem mais memória que o do Android. A última
       # linha do arquivo vence a de cima.
-      script: echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" >> gradle.properties
+      script: |
+        echo "" >> gradle.properties
+        echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" >> gradle.properties
     - &xcodegen
       name: Gerar o projeto do Xcode
       script: |
@@ -42,6 +44,10 @@ workflows:
       - *sdk
       - *memoria
       - *xcodegen
+      # O Kotlin compila aqui, antes do Xcode: erro de código aparece neste
+      # passo, com a mensagem completa do Gradle.
+      - name: Compilar o Kotlin para o simulador
+        script: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --no-daemon --stacktrace
       - name: Compilar o app para o simulador
         script: |
           set -o pipefail
@@ -82,6 +88,8 @@ workflows:
       - *sdk
       - *memoria
       - *xcodegen
+      - name: Compilar o Kotlin para o iPhone
+        script: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon --stacktrace
       - name: Assinatura
         script: xcode-project use-profiles --project iosApp/BBSolution.xcodeproj
       - name: Compilar e empacotar

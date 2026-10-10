@@ -17,7 +17,6 @@ plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.compose.multiplatform)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
 }
