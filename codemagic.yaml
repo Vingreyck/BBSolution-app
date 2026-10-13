@@ -18,9 +18,10 @@ definitions:
       name: Memória para o compilador do iPhone
       # O Kotlin para iPhone pede bem mais memória que o do Android. A última
       # linha do arquivo vence a de cima.
-      script: |
-        echo "" >> gradle.properties
-        echo "org.gradle.jvmargs=-Xmx6g -Dfile.encoding=UTF-8" >> gradle.properties
+      # Só avisa o que vai valer: quem manda de verdade é o -Dorg.gradle.jvmargs
+      # de cada comando do Gradle abaixo. A configuração do próprio Codemagic
+      # (2,5 GB) passava por cima da do projeto e o compilador ficava sem memória.
+      script: echo "O Gradle roda com 5 GB nos passos de Kotlin."
     - &xcodegen
       name: Gerar o projeto do Xcode
       script: |
@@ -47,7 +48,7 @@ workflows:
       # O Kotlin compila aqui, antes do Xcode: erro de código aparece neste
       # passo, com a mensagem completa do Gradle.
       - name: Compilar o Kotlin para o simulador
-        script: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --no-daemon --stacktrace
+        script: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64 --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx5g -Dfile.encoding=UTF-8"
       - name: Compilar o app para o simulador
         script: |
           set -o pipefail
@@ -90,7 +91,7 @@ workflows:
       - *memoria
       - *xcodegen
       - name: Compilar o Kotlin para o iPhone
-        script: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon --stacktrace
+        script: ./gradlew :shared:linkReleaseFrameworkIosArm64 --no-daemon --stacktrace -Dorg.gradle.jvmargs="-Xmx5g -Dfile.encoding=UTF-8"
       - name: Assinatura
         script: xcode-project use-profiles --project iosApp/BBSolution.xcodeproj
       - name: Compilar e empacotar
