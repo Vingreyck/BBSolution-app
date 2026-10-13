@@ -70,14 +70,15 @@ workflows:
   #  - em Codemagic > Team settings > codemagic.yaml settings > Code signing
   #    identities: um certificado de distribuição (Generate) e o perfil App
   #    Store do br.com.selebi.app (Fetch profiles);
-  #  - o nome da chave da App Store Connect (a mesma do SeeNet) no lugar de
-  #    NOME_DA_CHAVE_APP_STORE, logo abaixo.
+  #  - a chave da App Store Connect da conta B. B. NET UP cadastrada no
+  #    Codemagic (Team settings > Integrations > Developer Portal) com o
+  #    nome "bbsolucao", usada logo abaixo.
   iphone-testflight:
     name: iPhone para o TestFlight
     instance_type: mac_mini_m2
     max_build_duration: 120
     integrations:
-      app_store_connect: NOME_DA_CHAVE_APP_STORE
+      app_store_connect: bbsolucao
     environment:
       java: 17
       xcode: latest
