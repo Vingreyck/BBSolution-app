@@ -11,8 +11,6 @@ import io.ktor.client.plugins.api.createClientPlugin
 import io.ktor.client.plugins.timeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.delete
-import io.ktor.client.request.forms.formData
-import io.ktor.client.request.forms.submitFormWithBinaryData
 import io.ktor.client.request.get
 import io.ktor.client.request.header
 import io.ktor.client.request.patch
@@ -24,8 +22,8 @@ import io.ktor.client.statement.HttpResponse
 import io.ktor.client.statement.bodyAsChannel
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
-import io.ktor.http.Headers
 import io.ktor.http.HttpHeaders
+import io.ktor.http.content.ByteArrayContent
 import io.ktor.http.content.TextContent
 import io.ktor.http.isSuccess
 import io.ktor.utils.io.readUTF8Line
@@ -114,25 +112,24 @@ class SelebiApiKtor(
         longitude: String?,
     ): AnexoResposta {
         val bytes = SystemFileSystem.source(Path(arquivo.caminho)).buffered().use { it.readByteArray() }
-        val resposta = cliente.submitFormWithBinaryData(
-            url = base + "ordens/$id/anexos",
-            formData = formData {
-                append(
-                    "arquivo",
-                    bytes,
-                    Headers.build {
-                        append(HttpHeaders.ContentType, arquivo.tipo)
-                        append(HttpHeaders.ContentDisposition, "filename=\"${arquivo.nome}\"")
-                    },
-                )
-                append("idCliente", idCliente)
-                append("categoria", categoria)
-                itemId?.let { append("itemId", it) }
-                capturadoEm?.let { append("capturadoEm", it) }
-                latitude?.let { append("latitude", it) }
-                longitude?.let { append("longitude", it) }
+        // Campo nulo não vai no formulário — o servidor entende como ausente.
+        val corpo = montarMultipart(
+            campos = buildList {
+                add("idCliente" to idCliente)
+                add("categoria" to categoria)
+                itemId?.let { add("itemId" to it) }
+                capturadoEm?.let { add("capturadoEm" to it) }
+                latitude?.let { add("latitude" to it) }
+                longitude?.let { add("longitude" to it) }
             },
+            nomeCampoArquivo = "arquivo",
+            nomeArquivo = arquivo.nome,
+            tipoArquivo = arquivo.tipo,
+            conteudo = bytes,
         )
+        val resposta = cliente.post(base + "ordens/$id/anexos") {
+            setBody(ByteArrayContent(corpo.bytes, ContentType.parse(corpo.tipo)))
+        }
         return ler(resposta)
     }
 

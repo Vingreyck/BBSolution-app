@@ -102,4 +102,8 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        submit_to_testflight: true
+        # Falso por enquanto: o build chega ao TestFlight e fica pronto para o
+        # teste interno. Mandar para a revisão dos testadores externos exige os
+        # dados de contato em "Informações de teste" no App Store Connect; com
+        # eles preenchidos, volte para true.
+        submit_to_testflight: false
