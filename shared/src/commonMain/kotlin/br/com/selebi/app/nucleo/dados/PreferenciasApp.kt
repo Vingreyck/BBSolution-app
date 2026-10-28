@@ -31,6 +31,7 @@ class PreferenciasApp(private val preferencias: DataStore<Preferences>) {
         val empresaCodigo = stringPreferencesKey("empresa_codigo")
         val ultimoCpf = stringPreferencesKey("ultimo_cpf")
         val sincronizadoEm = longPreferencesKey("sincronizado_em")
+        val tecnicos = stringPreferencesKey("tecnicos")
     }
 
     val empresa: Flow<EmpresaLembrada?> = preferencias.data.map { p ->
@@ -76,7 +77,26 @@ class PreferenciasApp(private val preferencias: DataStore<Preferences>) {
         preferencias.edit { it[Chaves.sincronizadoEm] = instante.toEpochMilliseconds() }
     }
 
+    /**
+     * Os técnicos que podem ser escolhidos para uma visita de volta — guardados
+     * para valer sem sinal: a vistoria acaba na casa do cliente, onde o sinal
+     * nem sempre chega. Texto simples, `id<TAB>nome` por linha.
+     */
+    val tecnicos: Flow<List<Pair<String, String>>> = preferencias.data.map { p ->
+        p[Chaves.tecnicos].orEmpty().lines().mapNotNull { linha ->
+            val partes = linha.split('\t', limit = 2)
+            if (partes.size == 2 && partes[0].isNotBlank()) partes[0] to partes[1] else null
+        }
+    }
+
+    suspend fun guardarTecnicos(lista: List<Pair<String, String>>) {
+        preferencias.edit { it[Chaves.tecnicos] = lista.joinToString("\n") { (id, nome) -> id + "\t" + nome.replace('\n', ' ').replace('\t', ' ') } }
+    }
+
     suspend fun esquecerSincronizacao() {
-        preferencias.edit { it.remove(Chaves.sincronizadoEm) }
+        preferencias.edit {
+            it.remove(Chaves.sincronizadoEm)
+            it.remove(Chaves.tecnicos)
+        }
     }
 }

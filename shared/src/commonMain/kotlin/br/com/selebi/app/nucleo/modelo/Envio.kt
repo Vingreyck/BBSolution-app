@@ -2,7 +2,7 @@ package br.com.selebi.app.nucleo.modelo
 
 import kotlinx.datetime.Instant
 
-enum class TipoEnvio { ACAO, RESPOSTA, FOTO, ASSINATURA, NOTA }
+enum class TipoEnvio { ACAO, RESPOSTA, FOTO, VIDEO, ASSINATURA, NOTA }
 
 /**
  * Uma linha da fila de envio, como a tela mostra: o que é, de qual item, e —
@@ -23,6 +23,18 @@ data class Envio(
 
 /** Um aviso do servidor sobre algo que subiu — "o projeto avançou para…". */
 data class AvisoOs(val id: Long, val ordemId: String, val texto: String)
+
+/** Por que a fila está esperando em vez de subindo. */
+enum class MotivoEspera {
+    /** Sem internet, ou sinal tão fraco que o envio não completou. */
+    SEM_SINAL,
+
+    /** A internet está boa, mas o servidor deu erro ou não respondeu direito. */
+    SERVIDOR,
+}
+
+/** O que a fila sabe sobre a espera de agora: o motivo e, no caso do servidor, o código do erro. */
+data class EsperaEnvio(val motivo: MotivoEspera, val codigo: Int? = null)
 
 /** O resumo da fila para uma faixa na tela. */
 data class SituacaoEnvio(val esperando: Int = 0, val recusados: Int = 0) {

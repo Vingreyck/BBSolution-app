@@ -14,4 +14,5 @@ actual suspend fun <R> SelebiBanco.emTransacao(bloco: suspend () -> R): R = with
 fun criarBanco(contexto: Context): SelebiBanco =
     Room.databaseBuilder(contexto, SelebiBanco::class.java, "selebi.db")
         .fallbackToDestructiveMigrationFrom(dropAllTables = true, 1)
+        .addMigrations(MIGRACAO_2_3)
         .build()

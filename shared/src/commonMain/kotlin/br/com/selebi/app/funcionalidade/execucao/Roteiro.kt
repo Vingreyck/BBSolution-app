@@ -2,7 +2,9 @@ package br.com.selebi.app.funcionalidade.execucao
 
 import br.com.selebi.app.nucleo.modelo.AcaoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
+import br.com.selebi.app.nucleo.modelo.MotivoEspera
 import br.com.selebi.app.nucleo.modelo.Ordem
 import br.com.selebi.app.nucleo.modelo.StatusOs
 import br.com.selebi.app.nucleo.modelo.TipoEnvio
@@ -105,6 +107,34 @@ object Roteiro {
         }
     }
 
+    /**
+     * O que dizer no alto da folha da fila: o que está acontecendo e o que fazer.
+     *
+     * O texto muda com o sistema: só o Android sobe com o app fechado, então só
+     * ele pode dizer "não precisa esperar". No iPhone o técnico precisa saber
+     * que o app tem que estar aberto.
+     */
+    fun resumoDaFila(envios: List<Envio>, online: Boolean, espera: EsperaEnvio?, sobeComAppFechado: Boolean): String {
+        val esperando = envios.count { !it.recusado }
+        val guardado = "Está tudo guardado aqui"
+        val sozinho = if (sobeComAppFechado) "" else " Deixe o BBSolution aberto."
+        return when {
+            envios.isEmpty() -> "Tudo o que você fez nesta OS já está no BBSolution."
+            esperando == 0 -> "O servidor recusou o que está abaixo. Veja o motivo e descarte."
+            !online -> if (sobeComAppFechado) {
+                "Sem sinal agora. $guardado e sobe sozinho quando a conexão voltar — mesmo com o app fechado."
+            } else {
+                "Sem sinal agora. $guardado e sobe quando a conexão voltar. Abra o BBSolution quando tiver sinal."
+            }
+            espera?.motivo == MotivoEspera.SERVIDOR ->
+                "O servidor está com problema" + (espera.codigo?.let { " (erro $it)" } ?: "") +
+                    ". $guardado e o app tenta de novo sozinho.$sozinho"
+            espera?.motivo == MotivoEspera.SEM_SINAL ->
+                "O sinal está fraco e o envio não completou. $guardado e o app tenta de novo sozinho.$sozinho"
+            else -> if (sobeComAppFechado) "Subindo. Não precisa esperar com o app aberto." else "Subindo. Deixe o BBSolution aberto até terminar."
+        }
+    }
+
     /** Uma linha da fila em palavras: "Foto · Disjuntor do padrão — amperagem". */
     fun descrever(envio: Envio, ordem: Ordem?): String {
         val item = envio.itemId?.let { id -> ordem?.checklist?.firstOrNull { it.id == id }?.descricao }
@@ -120,6 +150,7 @@ object Roteiro {
             }
             TipoEnvio.RESPOSTA -> "Resposta" + (item?.let { " · $it" } ?: "")
             TipoEnvio.FOTO -> "Foto" + (item?.let { " · $it" } ?: "")
+            TipoEnvio.VIDEO -> "Vídeo" + (item?.let { " · $it" } ?: "")
             TipoEnvio.ASSINATURA -> "Assinatura do cliente"
             TipoEnvio.NOTA -> "Nota para o escritório"
         }

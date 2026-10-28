@@ -128,4 +128,91 @@ class RegrasOsTest {
             RegrasOs.impedimentos(pronta, resolvido = false, laudo = " ", temAssinatura = false),
         )
     }
+
+    // --- observação obrigatória, foto no lugar da explicação, "agendar" -------------
+    // Os mesmos casos de `src/os/testar-regras.ts` do servidor, um por um.
+
+    private fun regra(
+        tipo: TipoResposta = TipoResposta.TEXTO,
+        fotos: Int = 0,
+        exige: ExigeObservacao = ExigeObservacao.NAO,
+        agendavel: Boolean = false,
+    ) = ItemChecklist(
+        "i", 1, "Item", obrigatorio = true, concluido = false, observacao = null, tipoResposta = tipo,
+        fotosMinimas = fotos, exigeObservacao = exige, permiteAgendar = agendavel,
+    )
+
+    @Test
+    fun `sem regra nova, tudo como era`() {
+        assertTrue(RegrasOs.cumprido(regra(), Resposta.Texto("x"), 0))
+        assertFalse(RegrasOs.cumprido(regra(), null, 0))
+        assertFalse(RegrasOs.cumprido(regra(fotos = 1), Resposta.Texto("x"), 0))
+        assertTrue(RegrasOs.cumprido(regra(fotos = 1), Resposta.Texto("x"), 1))
+        assertFalse(RegrasOs.cumprido(regra(TipoResposta.CHECK), Resposta.Marcado(false), 0))
+        assertTrue(RegrasOs.cumprido(regra(TipoResposta.SIM_NAO), Resposta.Marcado(false), 0))
+        assertFalse(RegrasOs.cumprido(regra(TipoResposta.MULTIPLA), Resposta.Lista(emptyList()), 0))
+        assertTrue(RegrasOs.cumprido(regra(TipoResposta.FOTO), null, 1))
+        assertFalse(RegrasOs.cumprido(regra(TipoResposta.FOTO), null, 0))
+    }
+
+    @Test
+    fun `sem foto, a observacao vale no lugar da foto`() {
+        val numero = regra(TipoResposta.NUMERO, fotos = 1, exige = ExigeObservacao.SEM_FOTO)
+        val valor = Resposta.Numero(40.0)
+        assertFalse(RegrasOs.cumprido(numero, valor, 0, observacao = null))
+        assertTrue(RegrasOs.cumprido(numero, valor, 0, observacao = "poste na frente, sem como fotografar"))
+        assertTrue(RegrasOs.cumprido(numero, valor, 1, observacao = null))
+        assertFalse(RegrasOs.cumprido(numero, valor, 0, observacao = "   "))
+        assertFalse(RegrasOs.cumprido(numero, null, 0, observacao = "explicação, mas sem a resposta"))
+
+        val fachada = regra(TipoResposta.FOTO, fotos = 1, exige = ExigeObservacao.SEM_FOTO)
+        assertFalse(RegrasOs.cumprido(fachada, null, 0, observacao = null))
+        assertTrue(RegrasOs.cumprido(fachada, null, 0, observacao = "portão fechado, ninguém atendeu"))
+    }
+
+    @Test
+    fun `sempre pede a observacao com foto ou sem, e ela nao substitui a foto`() {
+        val aterramento = regra(TipoResposta.ESCOLHA, fotos = 1, exige = ExigeObservacao.SEMPRE)
+        val valor = Resposta.Texto("Não existe")
+        assertFalse(RegrasOs.cumprido(aterramento, valor, 1, observacao = null))
+        assertFalse(RegrasOs.cumprido(aterramento, valor, 0, observacao = "sem haste"))
+        assertTrue(RegrasOs.cumprido(aterramento, valor, 1, observacao = "sem haste, cabo solto"))
+
+        val rasgar = regra(TipoResposta.SIM_NAO, exige = ExigeObservacao.SEMPRE)
+        assertFalse(RegrasOs.cumprido(rasgar, Resposta.Marcado(true), 0, observacao = null))
+        assertTrue(RegrasOs.cumprido(rasgar, Resposta.Marcado(false), 0, observacao = "o cabo passa pelo forro"))
+        assertFalse(RegrasOs.cumprido(rasgar, null, 0, observacao = "só a observação"))
+    }
+
+    @Test
+    fun `agendar deixa o item para a visita de volta, mas so onde o item permite`() {
+        val sombra = regra(TipoResposta.ESCOLHA, fotos = 1, exige = ExigeObservacao.SEM_FOTO, agendavel = true)
+        assertTrue(RegrasOs.cumprido(sombra, null, 0, observacao = null, agendar = true))
+        assertFalse(RegrasOs.cumprido(regra(TipoResposta.ESCOLHA, fotos = 1), null, 0, observacao = null, agendar = true))
+        assertFalse(RegrasOs.cumprido(sombra, null, 0, observacao = null, agendar = false))
+    }
+
+    @Test
+    fun `o que falta, em palavras, e igual ao do servidor`() {
+        val aterramento = regra(TipoResposta.ESCOLHA, fotos = 1, exige = ExigeObservacao.SEMPRE)
+        assertEquals("Falta a resposta, 1 foto e a observação", RegrasOs.faltaNoItem(aterramento, 0))
+        assertEquals(
+            "Falta a observação",
+            RegrasOs.faltaNoItem(aterramento.copy(valor = Resposta.Texto("Existe e está bom")), 1),
+        )
+        val semFoto = regra(TipoResposta.NUMERO, fotos = 1, exige = ExigeObservacao.SEM_FOTO).copy(valor = Resposta.Numero(40.0))
+        assertEquals("Falta 1 foto (ou a observação do porquê)", RegrasOs.faltaNoItem(semFoto, 0))
+        assertNull(RegrasOs.faltaNoItem(semFoto.copy(observacao = "sem acesso"), 0))
+        assertEquals("Falta marcar como feito", RegrasOs.faltaNoItem(regra(TipoResposta.CHECK), 0))
+        assertEquals("Falta 1 foto", RegrasOs.faltaNoItem(regra(fotos = 2).copy(valor = Resposta.Texto("x")), 1))
+    }
+
+    @Test
+    fun `a observacao e obrigatoria so quando a regra manda`() {
+        val semFoto = regra(TipoResposta.NUMERO, fotos = 1, exige = ExigeObservacao.SEM_FOTO)
+        assertTrue(RegrasOs.observacaoObrigatoria(semFoto, fotos = 0))
+        assertFalse(RegrasOs.observacaoObrigatoria(semFoto, fotos = 1))
+        assertTrue(RegrasOs.observacaoObrigatoria(regra(exige = ExigeObservacao.SEMPRE), fotos = 3))
+        assertFalse(RegrasOs.observacaoObrigatoria(regra(), fotos = 0))
+    }
 }

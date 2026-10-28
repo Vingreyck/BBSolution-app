@@ -73,12 +73,12 @@ fun AcaoRapida(
         contentColor = if (habilitada) esquema.onSecondaryContainer else esquema.onSurfaceVariant.copy(alpha = 0.5f),
     ) {
         Column(
-            Modifier.padding(vertical = 14.dp),
+            Modifier.padding(horizontal = 4.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Icon(icone, contentDescription = null, modifier = Modifier.size(24.dp))
-            Text(rotulo, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
+            Text(rotulo, style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center, maxLines = 1, softWrap = false)
         }
     }
 }

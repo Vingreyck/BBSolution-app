@@ -3,6 +3,7 @@ package br.com.selebi.app.nucleo.dados
 import br.com.selebi.app.nucleo.banco.OrdemDao
 import br.com.selebi.app.nucleo.banco.paraModelo
 import br.com.selebi.app.nucleo.modelo.Ordem
+import br.com.selebi.app.nucleo.modelo.Pessoa
 import br.com.selebi.app.nucleo.rede.ErroApp
 import br.com.selebi.app.nucleo.rede.ExecutorApi
 import br.com.selebi.app.nucleo.rede.Resultado
@@ -43,7 +44,19 @@ class OrdensRepository(
 
         copia.gravarTodas(resultado.valor.ordens)
         preferencias.marcarSincronizacao(Datas.lerInstante(resultado.valor.geradoEm) ?: Datas.agoraMesmo())
+        // A lista de quem pode voltar numa visita de volta viaja junto: a vistoria
+        // acaba onde o sinal falha, e a lista precisa já estar no celular.
+        atualizarTecnicos()
         return Resultado.Ok(Unit)
+    }
+
+    /** Os técnicos que podem ser escolhidos para uma visita de volta (a última lista que o celular viu). */
+    val tecnicos: Flow<List<Pessoa>> = preferencias.tecnicos.map { lista -> lista.map { (id, nome) -> Pessoa(id, nome) } }
+
+    /** Busca a lista de técnicos; sem sinal, fica a que já estava. */
+    suspend fun atualizarTecnicos() {
+        val r = executor.executar { api.tecnicos() }
+        if (r is Resultado.Ok) preferencias.guardarTecnicos(r.valor.tecnicos.map { it.id to it.nome })
     }
 
     /** Atualiza uma OS só — a tela de detalhe chama ao abrir. */

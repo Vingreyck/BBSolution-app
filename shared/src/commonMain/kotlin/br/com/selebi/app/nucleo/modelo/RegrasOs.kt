@@ -130,42 +130,68 @@ object RegrasOs {
         }
     }
 
-    /**
-     * O que ainda falta para o item ficar cumprido, em poucas palavras —
-     * "Falta a resposta e 2 fotos". Nulo quando não falta nada.
-     */
-    fun faltaNoItem(item: ItemChecklist, fotos: Int): String? {
-        val minimo = if (item.tipoResposta == TipoResposta.FOTO) maxOf(1, item.fotosMinimas) else item.fotosMinimas
-        val faltamFotos = (minimo - fotos).coerceAtLeast(0)
-        val semResposta = item.tipoResposta != TipoResposta.FOTO && !cumprido(item, item.valor, Int.MAX_VALUE)
-        val textoFotos = when (faltamFotos) {
-            0 -> null
-            1 -> "1 foto"
-            else -> "$faltamFotos fotos"
-        }
-        val resposta = if (item.tipoResposta == TipoResposta.CHECK) "marcar como feito" else "a resposta"
-        val oQue = when {
-            semResposta && textoFotos != null -> "$resposta e $textoFotos"
-            semResposta -> resposta
-            textoFotos != null -> textoFotos
-            else -> return null
-        }
-        return "Falta $oQue"
+    /** A observação é obrigatória agora, para este item e esta quantidade de fotos? */
+    fun observacaoObrigatoria(item: ItemChecklist, fotos: Int): Boolean = when (item.exigeObservacao) {
+        ExigeObservacao.NAO -> false
+        ExigeObservacao.SEMPRE -> true
+        ExigeObservacao.SEM_FOTO -> fotos < fotosExigidas(item)
     }
 
-    /** O item está cumprido com esta resposta e esta quantidade de fotos? */
-    fun cumprido(item: ItemChecklist, valor: Resposta?, fotos: Int): Boolean {
-        val fotosOk = fotos >= item.fotosMinimas
-        return when (item.tipoResposta) {
-            TipoResposta.CHECK -> (valor as? Resposta.Marcado)?.sim == true && fotosOk
-            TipoResposta.SIM_NAO -> valor is Resposta.Marcado && fotosOk
-            TipoResposta.FOTO -> fotos >= maxOf(1, item.fotosMinimas)
-            TipoResposta.MULTIPLA, TipoResposta.SERIAL ->
-                (valor as? Resposta.Lista)?.valores?.isNotEmpty() == true && fotosOk
-            TipoResposta.NUMERO -> valor is Resposta.Numero && fotosOk
-            TipoResposta.TEXTO, TipoResposta.ESCOLHA ->
-                (valor as? Resposta.Texto)?.valor?.isNotBlank() == true && fotosOk
-        }
+    private fun fotosExigidas(item: ItemChecklist): Int =
+        if (item.tipoResposta == TipoResposta.FOTO) maxOf(1, item.fotosMinimas) else item.fotosMinimas
+
+    /** Tem resposta? Foto não tem: é anexo. */
+    private fun respondido(item: ItemChecklist, valor: Resposta?): Boolean = when (item.tipoResposta) {
+        TipoResposta.CHECK -> (valor as? Resposta.Marcado)?.sim == true
+        TipoResposta.SIM_NAO -> valor is Resposta.Marcado
+        TipoResposta.MULTIPLA, TipoResposta.SERIAL -> (valor as? Resposta.Lista)?.valores?.isNotEmpty() == true
+        TipoResposta.NUMERO -> valor is Resposta.Numero
+        TipoResposta.FOTO -> true
+        TipoResposta.TEXTO, TipoResposta.ESCOLHA -> (valor as? Resposta.Texto)?.valor?.isNotBlank() == true
+    }
+
+    /**
+     * O que ainda falta para o item ficar cumprido, em poucas palavras —
+     * "Falta a resposta, 1 foto e a observação". Nulo quando não falta nada. O
+     * mesmo texto do site (`faltaNoItem` de `src/os/regras-item.ts`).
+     */
+    fun faltaNoItem(item: ItemChecklist, fotos: Int): String? {
+        if (cumprido(item, item.valor, fotos)) return null
+        val partes = mutableListOf<String>()
+        if (!respondido(item, item.valor)) partes += if (item.tipoResposta == TipoResposta.CHECK) "marcar como feito" else "a resposta"
+        val temObs = !item.observacao.isNullOrBlank()
+        val explicavel = item.exigeObservacao == ExigeObservacao.SEM_FOTO
+        val faltam = (fotosExigidas(item) - fotos).coerceAtLeast(0)
+        val semFoto = faltam > 0 && !(explicavel && temObs)
+        if (semFoto) partes += if (faltam == 1) "1 foto" else "$faltam fotos"
+        if (item.exigeObservacao == ExigeObservacao.SEMPRE && !temObs) partes += "a observação"
+        if (partes.isEmpty()) return null
+        val junto = if (partes.size == 1) partes[0] else partes.dropLast(1).joinToString(", ") + " e " + partes.last()
+        // Onde a foto pode ser trocada por uma explicação, o técnico precisa saber.
+        return "Falta $junto" + if (semFoto && explicavel) " (ou a observação do porquê)" else ""
+    }
+
+    /**
+     * O item está cumprido com esta resposta, estas fotos e esta observação? Os
+     * últimos dois parâmetros assumem o que o item já tem; quem está
+     * respondendo agora passa os novos. É o `cumprido` de `src/os/regras-item.ts`.
+     *
+     *  - `agendar`: deixado para a visita de volta — conta como cumprido;
+     *  - `SEM_FOTO`: a observação vale no lugar da foto;
+     *  - `SEMPRE`: a observação é obrigatória, e a foto continua valendo o que valia.
+     */
+    fun cumprido(
+        item: ItemChecklist,
+        valor: Resposta?,
+        fotos: Int,
+        observacao: String? = item.observacao,
+        agendar: Boolean = item.agendar,
+    ): Boolean {
+        if (item.permiteAgendar && agendar) return true
+        val temObs = !observacao.isNullOrBlank()
+        val fotosOk = fotos >= fotosExigidas(item) || (item.exigeObservacao == ExigeObservacao.SEM_FOTO && temObs)
+        val observacaoOk = item.exigeObservacao != ExigeObservacao.SEMPRE || temObs
+        return respondido(item, valor) && fotosOk && observacaoOk
     }
 
     /** De quais situações cada ação parte — o `PERMITIDO` do servidor, só as do app. */

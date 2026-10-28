@@ -128,12 +128,15 @@ class CopiaLocal(
                     null -> item.observacao
                     else -> o.trim().ifEmpty { null }
                 }
-                val cumprido = RegrasOs.cumprido(item.paraModelo(), valor, dao.contarFotos(itemId))
+                // `agendar` ausente mantém como está, como no servidor.
+                val agendar = pedido.agendar ?: item.agendar
+                val cumprido = RegrasOs.cumprido(item.paraModelo(), valor, dao.contarFotos(itemId), observacao, agendar)
                 dao.responderLocal(
                     itemId,
                     valor.paraTexto(),
                     observacao,
                     cumprido,
+                    agendar,
                     pedido.respondidoEm ?: Instant.fromEpochMilliseconds(p.criadoEm).toString(),
                 )
             }

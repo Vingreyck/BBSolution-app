@@ -3,6 +3,7 @@ package br.com.selebi.app.nucleo.banco
 import br.com.selebi.app.nucleo.modelo.AnexoOs
 import br.com.selebi.app.nucleo.modelo.ClienteResumo
 import br.com.selebi.app.nucleo.modelo.EventoOs
+import br.com.selebi.app.nucleo.modelo.ExigeObservacao
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
 import br.com.selebi.app.nucleo.modelo.NotaOs
 import br.com.selebi.app.nucleo.modelo.Ordem
@@ -78,6 +79,10 @@ fun OrdemDto.itensParaEntidade(): List<ChecklistItemEntidade> = checklist.map {
         unidade = it.unidade,
         fotosMinimas = it.fotosMinimas,
         apenasCamera = it.apenasCamera,
+        exigeObservacao = it.exigeObservacao,
+        permiteAgendar = it.permiteAgendar,
+        aceitaVideo = it.aceitaVideo,
+        agendar = it.agendar,
         valorJson = it.valor?.toString()?.takeIf { v -> v != "null" },
         respondidoEm = it.respondidoEm,
     )
@@ -128,6 +133,10 @@ fun ChecklistItemEntidade.paraModelo(): ItemChecklist = ItemChecklist(
     unidade = unidade,
     fotosMinimas = fotosMinimas,
     apenasCamera = apenasCamera,
+    exigeObservacao = ExigeObservacao.daApi(exigeObservacao),
+    permiteAgendar = permiteAgendar,
+    aceitaVideo = aceitaVideo,
+    agendar = agendar,
     valor = respostaDoTexto(valorJson),
     respondidoEm = Datas.lerInstante(respondidoEm),
 )

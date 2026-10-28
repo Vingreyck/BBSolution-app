@@ -91,6 +91,7 @@ import br.com.selebi.app.nucleo.design.componentes.Pilula
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
 import br.com.selebi.app.nucleo.modelo.AvisoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
 import br.com.selebi.app.nucleo.modelo.Ordem
 import br.com.selebi.app.nucleo.modelo.Permissao
 import br.com.selebi.app.nucleo.modelo.Prioridade
@@ -126,6 +127,8 @@ data class OrdemDetalheEstado(
     val usuario: Usuario? = null,
     val envios: List<Envio> = emptyList(),
     val avisos: List<AvisoOs> = emptyList(),
+    /** Por que a fila está esperando, se está. */
+    val espera: EsperaEnvio? = null,
     val online: Boolean = true,
 ) {
     /**
@@ -154,9 +157,9 @@ class OrdemDetalheViewModel(
         ordens.observar(id),
         combine(atualizando, saiu) { a, s -> a to s },
         sessao.estado,
-        combine(execucao.envios(id), execucao.avisos(id)) { e, a -> e to a },
+        combine(execucao.envios(id), execucao.avisos(id), execucao.espera()) { e, a, x -> Triple(e, a, x) },
         conectividade.online,
-    ) { ordem, (at, foi), s, (envios, avisos), online ->
+    ) { ordem, (at, foi), s, (envios, avisos, espera), online ->
         val usuario = (s as? EstadoSessao.Logado)?.usuario
         OrdemDetalheEstado(
             ordem = ordem,
@@ -166,6 +169,7 @@ class OrdemDetalheViewModel(
             agora = Datas.agoraRelogio(),
             usuario = usuario,
             envios = envios,
+            espera = espera,
             avisos = avisos,
             online = online,
         )
@@ -328,9 +332,11 @@ fun OrdemDetalheConteudo(
             aoSalvar = { texto -> acoes.aoAnotar(texto) { folha = FolhaDetalhe.NENHUMA } },
             aoFechar = { folha = FolhaDetalhe.NENHUMA },
         )
-        FolhaDetalhe.FILA -> FolhaFila(estado.envios, ordem, estado.online, acoes.aoDescartar, acoes.aoEnviarAgora) {
-            folha = FolhaDetalhe.NENHUMA
-        }
+        FolhaDetalhe.FILA -> FolhaFila(
+            estado.envios, ordem, estado.online, acoes.aoDescartar, acoes.aoEnviarAgora,
+            aoFechar = { folha = FolhaDetalhe.NENHUMA },
+            espera = estado.espera,
+        )
         FolhaDetalhe.NENHUMA -> Unit
     }
 }

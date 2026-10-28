@@ -16,11 +16,14 @@ import br.com.selebi.app.nucleo.modelo.AcaoOs
 import br.com.selebi.app.nucleo.modelo.AnexoOs
 import br.com.selebi.app.nucleo.modelo.AvisoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
 import br.com.selebi.app.nucleo.modelo.Ordem
+import br.com.selebi.app.nucleo.modelo.Pessoa
 import br.com.selebi.app.nucleo.modelo.Resposta
 import br.com.selebi.app.nucleo.modelo.Usuario
 import br.com.selebi.app.nucleo.plataforma.OrigemFoto
+import br.com.selebi.app.nucleo.rede.AgendamentoPedido
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +43,10 @@ data class FormConclusao(
     val laudo: String = "",
     /** Nome de quem assinou — nem sempre o titular. */
     val assinante: String = "",
+    /** Quem volta para os itens deixados para depois ("agendar"). */
+    val tecnicoId: String? = null,
+    /** O dia da visita de volta (`AAAA-MM-DD`); nulo = o escritório marca. */
+    val dia: String? = null,
 )
 
 data class ExecucaoEstado(
@@ -49,6 +56,8 @@ data class ExecucaoEstado(
     val passo: Int = 0,
     val envios: List<Envio> = emptyList(),
     val avisos: List<AvisoOs> = emptyList(),
+    /** Por que a fila está esperando, se está. */
+    val espera: EsperaEnvio? = null,
     val online: Boolean = true,
     val usuario: Usuario? = null,
     /** Esperando o GPS ou a fila — os botões de ação ficam presos. */
@@ -58,6 +67,8 @@ data class ExecucaoEstado(
     /** Concluída neste wizard: mostra a tela de fim. */
     val concluidaAqui: Boolean = false,
     val conclusao: FormConclusao = FormConclusao(),
+    /** Os técnicos que podem ser escolhidos para a visita de volta. */
+    val tecnicos: List<Pessoa> = emptyList(),
 ) {
     val passos: List<Passo> get() = ordem?.let(Roteiro::passos).orEmpty()
     val passoAtual: Passo? get() = passos.getOrNull(passo)
@@ -91,6 +102,8 @@ class ExecucaoViewModel(
             resolvido = salvo[CHAVE_RESOLVIDO] ?: true,
             laudo = salvo[CHAVE_LAUDO] ?: "",
             assinante = salvo[CHAVE_ASSINANTE] ?: "",
+            tecnicoId = salvo[CHAVE_TECNICO],
+            dia = salvo[CHAVE_DIA],
         ),
     )
     private val eventos = Channel<EventoExecucao>(Channel.BUFFERED)
@@ -98,17 +111,23 @@ class ExecucaoViewModel(
 
     private val usuario = sessao.estado.map { (it as? EstadoSessao.Logado)?.usuario }
 
-    private data class Local(val ocupado: Boolean, val foto: String?, val concluida: Boolean, val form: FormConclusao)
+    private data class Local(
+        val ocupado: Boolean,
+        val foto: String?,
+        val concluida: Boolean,
+        val form: FormConclusao,
+        val tecnicos: List<Pessoa>,
+    )
 
     val estado: StateFlow<ExecucaoEstado> = combine(
         ordens.observar(ordemId),
         salvo.getStateFlow(CHAVE_PASSO, -1),
-        combine(execucao.envios(ordemId), execucao.avisos(ordemId)) { e, a -> e to a },
+        combine(execucao.envios(ordemId), execucao.avisos(ordemId), execucao.espera()) { e, a, x -> Triple(e, a, x) },
         combine(conectividade.online, usuario) { o, u -> o to u },
-        combine(ocupado, preparandoFoto, salvo.getStateFlow(CHAVE_CONCLUIDA, false), conclusao) { o, f, c, form ->
-            Local(o, f, c, form)
+        combine(ocupado, preparandoFoto, salvo.getStateFlow(CHAVE_CONCLUIDA, false), conclusao, ordens.tecnicos) { o, f, c, form, tec ->
+            Local(o, f, c, form, tec)
         },
-    ) { ordem, passo, (envios, avisos), (online, u), local ->
+    ) { ordem, passo, (envios, avisos, espera), (online, u), local ->
         val total = ordem?.let { Roteiro.passos(it).size } ?: 1
         ExecucaoEstado(
             carregado = true,
@@ -116,12 +135,14 @@ class ExecucaoViewModel(
             passo = if (passo < 0) 0 else passo.coerceAtMost(total - 1),
             envios = envios,
             avisos = avisos,
+            espera = espera,
             online = online,
             usuario = u,
             ocupado = local.ocupado,
             preparandoFoto = local.foto,
             concluidaAqui = local.concluida,
             conclusao = local.form,
+            tecnicos = local.tecnicos,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExecucaoEstado())
 
@@ -135,6 +156,8 @@ class ExecucaoViewModel(
             }
         }
         viewModelScope.launch { ordens.atualizar(ordemId) }
+        // A lista de quem pode voltar numa visita de volta: com sinal agora, já fica no celular.
+        viewModelScope.launch { ordens.atualizarTecnicos() }
     }
 
     // --- navegação -----------------------------------------------------------
@@ -163,7 +186,17 @@ class ExecucaoViewModel(
     /** Observação do item; vazia apaga. */
     fun observar(item: ItemChecklist, texto: String) = executar {
         val atual = it.checklist.firstOrNull { i -> i.id == item.id } ?: item
-        if (texto.trim() == atual.observacao.orEmpty()) null else execucao.responder(it, atual, atual.valor, texto)
+        if (texto.trim() == atual.observacao.orEmpty()) {
+            null
+        } else {
+            execucao.responder(it, atual, atual.valor, texto, agendar = atual.agendar)
+        }
+    }
+
+    /** "Deixar para a visita de volta": o item conta como cumprido, e o fim da vistoria pergunta quem volta. */
+    fun deixarParaDepois(item: ItemChecklist, deixar: Boolean) = executar {
+        val atual = it.checklist.firstOrNull { i -> i.id == item.id } ?: item
+        execucao.responder(it, atual, atual.valor, agendar = deixar)
     }
 
     // --- fotos ---------------------------------------------------------------
@@ -178,6 +211,14 @@ class ExecucaoViewModel(
 
     fun fotoDaGaleria(itemId: String?, foto: OrigemFoto) = prepararFoto(itemId) { ordem ->
         execucao.anexarFoto(ordem, itemId, foto, daCamera = false).also { arquivos.descartarOrigem(foto) }
+    }
+
+    /** O vídeo que a câmera gravou (nulo: a pessoa desistiu). */
+    fun videoGravado(itemId: String?, video: OrigemFoto?) {
+        if (video == null || itemId == null) return
+        prepararFoto(itemId) { ordem ->
+            execucao.anexarVideo(ordem, itemId, video).also { arquivos.descartarOrigem(video) }
+        }
     }
 
     fun removerFoto(anexo: AnexoOs) = executar { execucao.removerFoto(it, anexo) }
@@ -202,14 +243,28 @@ class ExecucaoViewModel(
         salvo[CHAVE_RESOLVIDO] = form.resolvido
         salvo[CHAVE_LAUDO] = form.laudo
         salvo[CHAVE_ASSINANTE] = form.assinante
+        salvo[CHAVE_TECNICO] = form.tecnicoId
+        salvo[CHAVE_DIA] = form.dia
     }
 
     fun assinar(desenho: ImageBitmap) = executar { execucao.assinar(it, desenho) }
 
     fun concluir() = executar(ocupando = true) {
         val form = conclusao.value
-        execucao.agir(it, AcaoOs.CONCLUIR, resolvido = form.resolvido, laudo = form.laudo, assinaturaNome = form.assinante)
-            .also { erro -> if (erro == null) salvo[CHAVE_CONCLUIDA] = true }
+        // Item deixado para depois pede quem volta — se o celular já conhece a lista.
+        val deixou = it.checklist.any { i -> i.agendar }
+        if (deixou && form.tecnicoId == null && estado.value.tecnicos.isNotEmpty()) {
+            return@executar "Escolha quem volta para os itens deixados para depois."
+        }
+        val volta = form.tecnicoId?.takeIf { deixou }?.let { quem -> AgendamentoPedido(quem, form.dia) }
+        execucao.agir(
+            it,
+            AcaoOs.CONCLUIR,
+            resolvido = form.resolvido,
+            laudo = form.laudo,
+            assinaturaNome = form.assinante,
+            agendamento = volta,
+        ).also { erro -> if (erro == null) salvo[CHAVE_CONCLUIDA] = true }
     }
 
     // --- ações da OS ---------------------------------------------------------
@@ -274,5 +329,7 @@ class ExecucaoViewModel(
         const val CHAVE_RESOLVIDO = "resolvido"
         const val CHAVE_LAUDO = "laudo"
         const val CHAVE_ASSINANTE = "assinante"
+        const val CHAVE_TECNICO = "tecnico"
+        const val CHAVE_DIA = "dia"
     }
 }

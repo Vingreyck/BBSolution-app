@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -157,13 +158,13 @@ fun PainelAssinatura(
                         },
                         enabled = !vazio,
                         shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                     ) { Text("Limpar") }
                     Button(
                         onClick = { aoConfirmar(desenhar(tracos.toList(), tamanho, espessura), nome.trim()) },
                         enabled = !vazio && tamanho.width > 0,
                         shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier.weight(1f).height(52.dp),
+                        modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                     ) { Text("Confirmar") }
                 }
             }

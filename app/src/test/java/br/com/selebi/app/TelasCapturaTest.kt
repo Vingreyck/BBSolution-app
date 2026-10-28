@@ -3,11 +3,18 @@ package br.com.selebi.app
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import br.com.selebi.app.amostras.Amostras
 import br.com.selebi.app.funcionalidade.acesso.CadastroConteudo
 import br.com.selebi.app.funcionalidade.acesso.CadastroEnviadoTela
@@ -29,6 +36,7 @@ import br.com.selebi.app.funcionalidade.execucao.AcoesExecucao
 import br.com.selebi.app.funcionalidade.execucao.Camada
 import br.com.selebi.app.funcionalidade.execucao.ExecucaoConteudo
 import br.com.selebi.app.funcionalidade.execucao.ExecucaoEstado
+import br.com.selebi.app.funcionalidade.execucao.FormConclusao
 import br.com.selebi.app.funcionalidade.ordens.AcoesDetalhe
 import br.com.selebi.app.funcionalidade.ordens.OrdemDetalheConteudo
 import br.com.selebi.app.funcionalidade.ordens.OrdemDetalheEstado
@@ -38,9 +46,14 @@ import br.com.selebi.app.funcionalidade.perfil.PerfilConteudo
 import br.com.selebi.app.nucleo.design.componentes.TipoAviso
 import br.com.selebi.app.funcionalidade.acesso.AvisoTela
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
+import br.com.selebi.app.nucleo.modelo.AnexoOs
 import br.com.selebi.app.nucleo.modelo.AvisoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
+import br.com.selebi.app.nucleo.modelo.MotivoEspera
 import br.com.selebi.app.nucleo.modelo.Ordem
+import br.com.selebi.app.nucleo.modelo.Pessoa
+import br.com.selebi.app.nucleo.modelo.Resposta
 import br.com.selebi.app.nucleo.modelo.TrilhaCampo
 import br.com.selebi.app.nucleo.modelo.Usuario
 import br.com.selebi.app.navegacao.BarraDeBaixo
@@ -69,14 +82,32 @@ import org.robolectric.annotation.GraphicsMode
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @Config(sdk = [34], qualifiers = "w411dp-h891dp-xxhdpi")
-class TelasCapturaTest {
+open class TelasCapturaTest {
 
     @get:Rule
     val regra = createComposeRule()
 
+    /** Onde as imagens saem. A versão de tela estreita e letra grande usa outra pasta. */
+    protected open val pasta = "build/telas"
+
+    /** Largura em que o conteúdo é desenhado. Nulo: a da tela da amostra. */
+    protected open val larguraDp: Int? = null
+
+    /** Tamanho da letra do sistema (1,0 é o normal; "Fonte grande" do Android é ~1,3). */
+    protected open val escalaDaLetra = 1f
+
+    @Composable
+    private fun NoTamanho(conteudo: @Composable () -> Unit) {
+        val d = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(d.density, escalaDaLetra)) {
+            val largura = larguraDp
+            Box(if (largura != null) Modifier.width(largura.dp).testTag("captura") else Modifier.testTag("captura")) { conteudo() }
+        }
+    }
+
     private fun capturar(nome: String, escuro: Boolean = false, conteudo: @Composable () -> Unit) {
-        regra.setContent { SelebiTema(escuro = escuro) { conteudo() } }
-        regra.onRoot().captureRoboImage("build/telas/$nome.png")
+        regra.setContent { SelebiTema(escuro = escuro) { NoTamanho(conteudo) } }
+        regra.onNodeWithTag("captura").captureRoboImage("$pasta/$nome.png")
     }
 
     private fun estadoOrdens(): OrdensEstado = Amostras.estadoOrdens()
@@ -142,6 +173,13 @@ class TelasCapturaTest {
 
     @Test
     fun ordens() = capturar("10-ordens") {
+        NaCasca(Destino.ORDENS) { OrdensConteudo(estadoOrdens(), {}, {}, {}, {}, {}, {}, {}, {}) }
+    }
+
+    /** Tela estreita (iPhone SE, letra grande): os botões do cartão não podem quebrar a palavra. */
+    @Test
+    @Config(qualifiers = "w320dp-h800dp-xxhdpi")
+    fun ordensTelaEstreita() = capturar("14-ordens-tela-estreita") {
         NaCasca(Destino.ORDENS) { OrdensConteudo(estadoOrdens(), {}, {}, {}, {}, {}, {}, {}, {}) }
     }
 
@@ -239,13 +277,20 @@ class TelasCapturaTest {
 
     // --- execução da OS (o wizard) ------------------------------------------
 
-    private fun execucao(ordem: Ordem, passo: Int, envios: List<Envio> = emptyList(), online: Boolean = true) = ExecucaoEstado(
+    private fun execucao(
+        ordem: Ordem,
+        passo: Int,
+        envios: List<Envio> = emptyList(),
+        online: Boolean = true,
+        tecnicos: List<Pessoa> = emptyList(),
+    ) = ExecucaoEstado(
         carregado = true,
         ordem = ordem,
         passo = passo,
         envios = envios,
         online = online,
         usuario = Amostras.tecnico,
+        tecnicos = tecnicos,
     )
 
     @Composable
@@ -311,13 +356,73 @@ class TelasCapturaTest {
         )
     }
 
+    // --- observação obrigatória, vídeo e "agendar" na vistoria ------------------------
+
+    /** O aterramento: com a foto e sem a observação que ele sempre pede, o campo fica aberto e em vermelho. */
+    @Test
+    @Config(qualifiers = "w411dp-h1100dp-xhdpi")
+    fun execucaoItemObservacaoObrigatoria() = capturar("73-execucao-item-observacao-obrigatoria") {
+        val base = AmostrasExecucao.vistoriaEmCampo()
+        val ordem = base.copy(
+            anexos = base.anexos + AnexoOs("a8", "v08", "foto", null, pendente = true, enviadoPorId = "u2"),
+            checklist = base.checklist.map { if (it.id == "v08") it.copy(valor = Resposta.Texto("Não existe")) else it },
+        )
+        Wizard(execucao(ordem, 8))
+    }
+
+    /** A UC sem foto: a observação vale no lugar dela, e o campo pergunta por quê. */
+    @Test
+    @Config(qualifiers = "w411dp-h1100dp-xhdpi")
+    fun execucaoItemSemFoto() = capturar("74-execucao-item-sem-foto") {
+        val base = AmostrasExecucao.vistoriaEmCampo()
+        val ordem = base.copy(anexos = base.anexos.filterNot { it.itemId == "v01" })
+        Wizard(execucao(ordem, 1))
+    }
+
+    /** A sombra: o item que pode ficar para a visita de volta. */
+    @Test
+    @Config(qualifiers = "w411dp-h1300dp-xhdpi")
+    fun execucaoItemPodeAgendar() = capturar("75-execucao-item-pode-agendar") {
+        Wizard(execucao(AmostrasExecucao.vistoriaEmCampo(), 14))
+    }
+
+    @Test
+    @Config(qualifiers = "w411dp-h1100dp-xhdpi")
+    fun execucaoItemDeixadoParaDepois() = capturar("76-execucao-item-deixado-para-depois") {
+        val base = AmostrasExecucao.vistoriaEmCampo()
+        val ordem = base.copy(checklist = base.checklist.map { if (it.id == "v14") it.copy(agendar = true, concluido = true) else it })
+        Wizard(execucao(ordem, 14))
+    }
+
+    /** Onde vai ficar o inversor: foto ou vídeo, com observação sempre. */
+    @Test
+    @Config(qualifiers = "w411dp-h1300dp-xhdpi")
+    fun execucaoItemVideo() = capturar("77-execucao-item-video") {
+        val base = AmostrasExecucao.vistoriaEmCampo()
+        val ordem = base.copy(anexos = base.anexos + AnexoOs("a9", "v16", "video", null, pendente = true, enviadoPorId = "u2"))
+        Wizard(execucao(ordem, 16))
+    }
+
+    /** O fim da vistoria: quem volta e quando, uma vez só, para tudo o que ficou. */
+    @Test
+    @Config(qualifiers = "w411dp-h2000dp-xhdpi")
+    fun execucaoConclusaoComVisitaDeVolta() = capturar("78-execucao-conclusao-visita-de-volta") {
+        val base = AmostrasExecucao.vistoriaEmCampo()
+        val deixados = setOf("v10", "v14", "v15")
+        val ordem = base.copy(checklist = base.checklist.map { if (it.id in deixados) it.copy(agendar = true, concluido = true) else it })
+        Wizard(
+            execucao(ordem, ordem.checklist.size + 1, tecnicos = listOf(Pessoa("u2", "Diego Andrade"), Pessoa("u3", "Rafael Oliveira"), Pessoa("u4", "Tiago Matos")))
+                .copy(conclusao = FormConclusao(tecnicoId = "u3", dia = Amostras.agora.date.plusDays(2).toString())),
+        )
+    }
+
     @OptIn(ExperimentalRoborazziApi::class)
     @Test
     fun execucaoIndice() {
         regra.setContent {
-            SelebiTema { Wizard(execucao(AmostrasExecucao.vistoriaEmCampo(), 5), camada = Camada.INDICE) }
+            SelebiTema { NoTamanho { Wizard(execucao(AmostrasExecucao.vistoriaEmCampo(), 5), camada = Camada.INDICE) } }
         }
-        captureScreenRoboImage("build/telas/70-execucao-indice.png")
+        captureScreenRoboImage("$pasta/70-execucao-indice.png")
     }
 
     @OptIn(ExperimentalRoborazziApi::class)
@@ -325,10 +430,30 @@ class TelasCapturaTest {
     fun execucaoFila() {
         regra.setContent {
             SelebiTema {
-                Wizard(execucao(AmostrasExecucao.vistoriaEmCampo(), 5, AmostrasExecucao.enviosComRecusa(), online = false), camada = Camada.FILA)
+                NoTamanho {
+                    Wizard(execucao(AmostrasExecucao.vistoriaEmCampo(), 5, AmostrasExecucao.enviosComRecusa(), online = false), camada = Camada.FILA)
+                }
             }
         }
-        captureScreenRoboImage("build/telas/71-execucao-fila.png")
+        captureScreenRoboImage("$pasta/71-execucao-fila.png")
+    }
+
+    /** Internet ligada e o servidor dando erro: a folha diz isso, em vez de "sobe sozinho". */
+    @OptIn(ExperimentalRoborazziApi::class)
+    @Test
+    fun execucaoFilaServidor() {
+        regra.setContent {
+            SelebiTema {
+                NoTamanho {
+                    Wizard(
+                        execucao(AmostrasExecucao.vistoriaEmCampo(), 5, AmostrasExecucao.enviosVistoria().take(3), online = true)
+                            .copy(espera = EsperaEnvio(MotivoEspera.SERVIDOR, 500)),
+                        camada = Camada.FILA,
+                    )
+                }
+            }
+        }
+        captureScreenRoboImage("$pasta/72-execucao-fila-servidor.png")
     }
 
     @Test

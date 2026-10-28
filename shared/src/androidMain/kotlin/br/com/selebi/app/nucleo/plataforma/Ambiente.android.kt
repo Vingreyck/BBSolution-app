@@ -4,6 +4,8 @@ import android.os.Build
 
 actual val nomeDoSistema: String = "Android"
 
+actual val enviaComOAppFechado: Boolean = true
+
 actual fun versaoDoSistema(): String = Build.VERSION.RELEASE.orEmpty()
 
 actual fun descricaoDoDispositivo(): String {

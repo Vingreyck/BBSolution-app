@@ -8,6 +8,7 @@ import br.com.selebi.app.nucleo.modelo.AcaoOs
 import br.com.selebi.app.nucleo.modelo.AnexoOs
 import br.com.selebi.app.nucleo.modelo.AvisoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
 import br.com.selebi.app.nucleo.modelo.ModoRastreio
 import br.com.selebi.app.nucleo.modelo.Ordem
@@ -17,6 +18,7 @@ import br.com.selebi.app.nucleo.modelo.TipoEnvio
 import br.com.selebi.app.nucleo.rastreio.EstadoRastreio
 import br.com.selebi.app.nucleo.rastreio.Rastreador
 import br.com.selebi.app.nucleo.rede.AcaoPedido
+import br.com.selebi.app.nucleo.rede.AgendamentoPedido
 import br.com.selebi.app.nucleo.rede.ErroApp
 import br.com.selebi.app.nucleo.rede.ExecutorApi
 import br.com.selebi.app.nucleo.rede.NotaPedido
@@ -55,6 +57,9 @@ class ExecucaoRepository(
     private val json: Json,
     private val rastreador: Rastreador,
 ) {
+    /** Por que a fila está esperando (sem sinal, erro do servidor), ou nulo. */
+    fun espera(): Flow<EsperaEnvio?> = fila.espera
+
     fun envios(ordemId: String): Flow<List<Envio>> = fila.observarDa(ordemId).map { lista -> lista.map(::envio) }
 
     fun todosEnvios(): Flow<List<Envio>> = fila.observarTodos().map { lista -> lista.map(::envio) }
@@ -75,6 +80,8 @@ class ExecucaoRepository(
         resolvido: Boolean = true,
         laudo: String? = null,
         assinaturaNome: String? = null,
+        /** Quem volta para o que ficou para depois ("agendar"). Só vale se há item marcado. */
+        agendamento: AgendamentoPedido? = null,
     ): String? {
         val usuario = sessao.usuario ?: return "Sua sessão acabou. Entre de novo."
         if (!RegrasOs.permitida(acao, ordem.status)) {
@@ -104,6 +111,7 @@ class ExecucaoRepository(
             laudo = laudoLimpo.takeIf { acao == AcaoOs.CONCLUIR },
             assinaturaNome = assinaturaNome?.trim()?.take(RegrasOs.NOME_MAXIMO)?.ifEmpty { null }
                 .takeIf { acao == AcaoOs.CONCLUIR },
+            agendamento = agendamento.takeIf { acao == AcaoOs.CONCLUIR && ordem.checklist.any { it.agendar } },
         )
         fila.enfileirar(
             PendenteEntidade(
@@ -135,19 +143,35 @@ class ExecucaoRepository(
 
     // --- checklist -----------------------------------------------------------
 
-    /** `observacao` nula mantém a que está; vazia apaga. */
-    suspend fun responder(ordem: Ordem, item: ItemChecklist, valor: Resposta?, observacao: String? = null): String? {
+    /**
+     * A resposta do item. `observacao` nula mantém a que o item tem; vazia apaga.
+     * `agendar` nulo é "não": responder o item de verdade tira ele da visita de volta.
+     *
+     * O pedido leva o estado inteiro (resposta, observação, agendar): uma resposta
+     * nova toma o lugar da que ainda não subiu, e o que só estava na anterior não
+     * pode se perder.
+     */
+    suspend fun responder(
+        ordem: Ordem,
+        item: ItemChecklist,
+        valor: Resposta?,
+        observacao: String? = null,
+        agendar: Boolean? = null,
+    ): String? {
         val usuario = sessao.usuario ?: return "Sua sessão acabou. Entre de novo."
         if (ordem.status.encerrada) return "A OS já foi encerrada; o checklist não muda mais."
         val normalizado = when (val n = RegrasOs.normalizar(item, valor)) {
             is RegrasOs.Normalizado.Recusa -> return n.mensagem
             is RegrasOs.Normalizado.Ok -> n.valor
         }
+        val deixar = agendar == true
+        if (deixar && !item.permiteAgendar) return "Este item não pode ficar para outra visita."
         val id = novoId()
         val pedido = RespostaPedido(
             valor = normalizado.paraJson(),
-            observacao = observacao?.trim()?.take(RegrasOs.TEXTO_MAXIMO),
+            observacao = (observacao ?: item.observacao)?.trim()?.take(RegrasOs.TEXTO_MAXIMO),
             respondidoEm = Datas.agoraMesmo().toString(),
+            agendar = deixar,
         )
         fila.enfileirar(
             PendenteEntidade(
@@ -183,6 +207,28 @@ class ExecucaoRepository(
             longitude = ponto?.longitude ?: foto.longitude,
         )
         enfileirarAnexo(id, ordem.id, usuario.id, itemId, dados, foto.arquivo)
+        return null
+    }
+
+    /**
+     * Guarda o vídeo gravado (sem reduzir: a câmera já grava curto) e põe na fila.
+     * Só nos itens que aceitam vídeo.
+     */
+    suspend fun anexarVideo(ordem: Ordem, itemId: String, origem: OrigemFoto): String? {
+        val usuario = sessao.usuario ?: return "Sua sessão acabou. Entre de novo."
+        if (ordem.status.encerrada) return "A OS já foi encerrada; não recebe mais vídeo."
+        if (ordem.checklist.firstOrNull { it.id == itemId }?.aceitaVideo != true) return "Este item não aceita vídeo — tire uma foto."
+        val id = novoId()
+        val arquivo = arquivos.guardarVideo(origem, ordem.id, id) ?: return "Não deu para guardar o vídeo. Grave de novo."
+        val ponto = localizacao.atual(limiteMs = 4_000)
+        val dados = AnexoNaFila(
+            categoria = "video",
+            itemId = itemId,
+            capturadoEm = Datas.agoraMesmo().toString(),
+            latitude = ponto?.latitude,
+            longitude = ponto?.longitude,
+        )
+        enfileirarAnexo(id, ordem.id, usuario.id, itemId, dados, arquivo)
         return null
     }
 
@@ -276,7 +322,11 @@ class ExecucaoRepository(
             TipoPendente.ACAO -> TipoEnvio.ACAO
             TipoPendente.RESPOSTA -> TipoEnvio.RESPOSTA
             TipoPendente.NOTA -> TipoEnvio.NOTA
-            else -> if (p.itemId == null && p.arquivo?.endsWith(".png") == true) TipoEnvio.ASSINATURA else TipoEnvio.FOTO
+            else -> when {
+                p.itemId == null && p.arquivo?.endsWith(".png") == true -> TipoEnvio.ASSINATURA
+                p.arquivo?.let { it.endsWith(".mp4") || it.endsWith(".mov") } == true -> TipoEnvio.VIDEO
+                else -> TipoEnvio.FOTO
+            }
         }
         val acao = if (tipo == TipoEnvio.ACAO) {
             runCatching { json.decodeFromString(AcaoPedido.serializer(), p.corpoJson).acao }.getOrNull()

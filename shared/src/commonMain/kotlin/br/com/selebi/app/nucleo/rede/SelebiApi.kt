@@ -71,6 +71,9 @@ interface SelebiApi {
 
     suspend fun trilha(id: String): TrilhaDto
 
+    /** Os técnicos que podem ser escolhidos para uma visita de volta. */
+    suspend fun tecnicos(): TecnicosResposta
+
     suspend fun equipe(): EquipeResposta
 
     suspend fun aprovar(id: String, pedido: AprovarPedido)

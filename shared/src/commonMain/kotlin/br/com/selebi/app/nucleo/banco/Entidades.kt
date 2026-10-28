@@ -1,5 +1,6 @@
 package br.com.selebi.app.nucleo.banco
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -99,6 +100,11 @@ data class ChecklistItemEntidade(
     val unidade: String? = null,
     val fotosMinimas: Int = 0,
     val apenasCamera: Boolean = false,
+    /** `nao`, `sem_foto` ou `sempre` (banco versão 3). */
+    @ColumnInfo(defaultValue = "'nao'") val exigeObservacao: String = "nao",
+    @ColumnInfo(defaultValue = "0") val permiteAgendar: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val aceitaVideo: Boolean = false,
+    @ColumnInfo(defaultValue = "0") val agendar: Boolean = false,
     /** A resposta em JSON (`true`, `40`, `"Growatt"`, `["A","B"]`), ou nulo. */
     val valorJson: String? = null,
     val respondidoEm: String? = null,

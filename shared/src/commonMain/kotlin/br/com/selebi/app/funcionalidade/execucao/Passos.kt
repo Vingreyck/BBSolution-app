@@ -6,11 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -30,6 +33,7 @@ import androidx.compose.material.icons.outlined.Directions
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.Draw
 import androidx.compose.material.icons.outlined.EditNote
+import androidx.compose.material.icons.outlined.EventRepeat
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.LocationOn
 import androidx.compose.material.icons.outlined.PlayArrow
@@ -40,6 +44,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -75,12 +80,15 @@ import br.com.selebi.app.nucleo.design.componentes.TipoAviso
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
 import br.com.selebi.app.nucleo.modelo.AcaoOs
 import br.com.selebi.app.nucleo.modelo.AnexoOs
+import br.com.selebi.app.nucleo.modelo.ExigeObservacao
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
 import br.com.selebi.app.nucleo.modelo.Ordem
+import br.com.selebi.app.nucleo.modelo.Pessoa
 import br.com.selebi.app.nucleo.modelo.RegrasOs
 import br.com.selebi.app.nucleo.modelo.StatusOs
 import br.com.selebi.app.nucleo.modelo.TipoResposta
 import br.com.selebi.app.nucleo.util.Datas
+import br.com.selebi.app.nucleo.util.plusDays
 import kotlinx.datetime.LocalDateTime
 
 // ---------------------------------------------------------------------------
@@ -229,8 +237,9 @@ fun BarraChegada(estado: ExecucaoEstado, acoes: AcoesExecucao) {
                 onClick = { acoes.aoAgir(AcaoOs.INICIAR, null) },
                 enabled = !estado.ocupado,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.weight(1f).height(56.dp),
-            ) { Text("Já cheguei") }
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
+            ) { Text("Já cheguei", textAlign = TextAlign.Center) }
             BotaoPrincipal(
                 "Estou a caminho",
                 { acoes.aoAgir(AcaoOs.DESLOCAMENTO, null) },
@@ -275,7 +284,8 @@ fun ConteudoItem(estado: ExecucaoEstado, item: ItemChecklist, acoes: AcoesExecuc
     val c = SelebiTema.cores
     val habilitado = Roteiro.podeResponder(ordem)
     val fotos = ordem.fotosDo(item.id)
-    val pedeFoto = item.tipoResposta == TipoResposta.FOTO || item.fotosMinimas > 0
+    val pedeFoto = item.tipoResposta == TipoResposta.FOTO || item.fotosMinimas > 0 || item.aceitaVideo
+    val obsObrigatoria = RegrasOs.observacaoObrigatoria(item, fotos.size)
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -298,6 +308,9 @@ fun ConteudoItem(estado: ExecucaoEstado, item: ItemChecklist, acoes: AcoesExecuc
             Text(item.descricao, style = MaterialTheme.typography.headlineSmall)
         }
         item.ajuda?.takeIf { it.isNotBlank() }?.let { Dica(it) }
+        if (item.agendar) {
+            DeixadoParaDepois(habilitado) { acoes.aoDeixarParaDepois(item, false) }
+        }
         CampoResposta(item, habilitado, { acoes.aoResponder(item, it) }, acoes.aoLerCodigo)
         if (pedeFoto || fotos.isNotEmpty()) {
             SecaoFotos(
@@ -310,11 +323,16 @@ fun ConteudoItem(estado: ExecucaoEstado, item: ItemChecklist, acoes: AcoesExecuc
                 aoCamera = { acoes.aoCamera(item.id) },
                 aoGaleria = { acoes.aoGaleria(item.id) },
                 aoAbrir = aoAbrirFoto,
+                aceitaVideo = item.aceitaVideo,
+                aoVideo = { acoes.aoVideo(item.id) },
             )
         } else {
             FotoOpcional(habilitado && estado.preparandoFoto == null, item.apenasCamera, { acoes.aoCamera(item.id) }, { acoes.aoGaleria(item.id) })
         }
-        CampoObservacao(item, habilitado) { acoes.aoObservar(item, it) }
+        CampoObservacao(item, habilitado, obsObrigatoria) { acoes.aoObservar(item, it) }
+        if (item.permiteAgendar && !item.agendar) {
+            PodeFicarParaDepois(habilitado) { acoes.aoDeixarParaDepois(item, true) }
+        }
         FimDaRolagem()
     }
 }
@@ -338,10 +356,18 @@ private fun BloqueioDoChecklist(ordem: Ordem, acoes: AcoesExecucao) {
     }
 }
 
-/** A observação do item: fechada quando vazia, para não pesar a tela. */
+/**
+ * A observação do item: fechada quando vazia e opcional, para não pesar a tela;
+ * aberta, com o motivo e o vermelho de "falta", quando é obrigatória.
+ *
+ *  - `SEMPRE`: "Observação (obrigatória)";
+ *  - `SEM_FOTO`, sem a foto: "Por que não deu para fotografar?" — a explicação vale
+ *    no lugar da foto.
+ */
 @Composable
-private fun CampoObservacao(item: ItemChecklist, habilitado: Boolean, aoSalvar: (String) -> Unit) {
-    var aberta by rememberSaveable(item.id) { mutableStateOf(!item.observacao.isNullOrBlank()) }
+private fun CampoObservacao(item: ItemChecklist, habilitado: Boolean, obrigatoria: Boolean, aoSalvar: (String) -> Unit) {
+    var aberta by rememberSaveable(item.id) { mutableStateOf(obrigatoria || !item.observacao.isNullOrBlank()) }
+    if (obrigatoria && !aberta) aberta = true
     if (!aberta) {
         TextButton(onClick = { aberta = true }, enabled = habilitado) {
             Icon(Icons.Outlined.EditNote, contentDescription = null, modifier = Modifier.size(20.dp))
@@ -352,17 +378,76 @@ private fun CampoObservacao(item: ItemChecklist, habilitado: Boolean, aoSalvar: 
     val salvo = item.observacao.orEmpty()
     var rascunho by rememberSaveable(item.id + ":obs") { mutableStateOf(salvo) }
     GuardarAoParar(rascunho, salvo, aoSalvar, item.id + ":obs")
+    val porQueSemFoto = item.exigeObservacao == ExigeObservacao.SEM_FOTO && obrigatoria
     OutlinedTextField(
         value = rascunho,
         onValueChange = { rascunho = it.take(RegrasOs.TEXTO_MAXIMO) },
-        label = { Text("Observação") },
-        placeholder = { Text("O que o escritório precisa saber deste item") },
+        label = {
+            Text(
+                when {
+                    porQueSemFoto -> "Por que não deu para fotografar? (obrigatória)"
+                    obrigatoria -> "Observação (obrigatória)"
+                    else -> "Observação"
+                },
+            )
+        },
+        placeholder = {
+            Text(
+                when {
+                    porQueSemFoto -> "Sem a foto, explique o que impediu — vale no lugar dela"
+                    obrigatoria -> "O que o escritório precisa saber deste item"
+                    else -> "O que o escritório precisa saber deste item"
+                },
+            )
+        },
+        isError = obrigatoria && rascunho.isBlank(),
         enabled = habilitado,
         minLines = 2,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences),
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth(),
     )
+}
+
+/** O item que não dá para medir agora: um botão discreto, no fim da tela. */
+@Composable
+private fun PodeFicarParaDepois(habilitado: Boolean, aoDeixar: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Não dá para medir agora?", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "Deixe para uma visita de volta. O item conta como feito, e no fim da vistoria você escolhe quem volta.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            OutlinedButton(
+                onClick = aoDeixar,
+                enabled = habilitado,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            ) {
+                Icon(Icons.Outlined.EventRepeat, contentDescription = null, modifier = Modifier.size(20.dp))
+                Text("Deixar para a visita de volta", modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+    }
+}
+
+/** O item já foi deixado para depois: diz isso e dá o jeito de desfazer. */
+@Composable
+private fun DeixadoParaDepois(habilitado: Boolean, aoDesfazer: () -> Unit) {
+    val c = SelebiTema.cores
+    Surface(color = c.infoFundo, contentColor = c.sobreInfo, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Row(Modifier.padding(start = 14.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.EventRepeat, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(
+                "Fica para a visita de volta. No fim, escolha quem volta. Responder aqui tira o item da visita.",
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f).padding(start = 10.dp, top = 8.dp, bottom = 8.dp),
+            )
+            TextButton(onClick = aoDesfazer, enabled = habilitado) { Text("Desfazer") }
+        }
+    }
 }
 
 @Composable
@@ -372,6 +457,7 @@ fun BarraItem(estado: ExecucaoEstado, item: ItemChecklist, acoes: AcoesExecucao)
     val ultimo = estado.passo == estado.passos.lastIndex - 1
     BarraDoPasso(
         aviso = when {
+            item.agendar -> "↪ Fica para a visita de volta"
             item.concluido -> "✓ Item cumprido"
             falta != null && item.obrigatorio -> falta
             falta != null -> "$falta (opcional)"
@@ -395,7 +481,7 @@ fun BarraItem(estado: ExecucaoEstado, item: ItemChecklist, acoes: AcoesExecucao)
 // Conclusão
 
 @Composable
-fun ConteudoConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao) {
+fun ConteudoConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao, agora: LocalDateTime = Datas.agoraRelogio()) {
     val ordem = estado.ordem ?: return
     val c = SelebiTema.cores
     val form = estado.conclusao
@@ -449,6 +535,8 @@ fun ConteudoConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao) {
             }
         }
 
+        BlocoVisitaDeVolta(ordem, form, estado.tecnicos, agora, acoes)
+
         Text("Como terminou", style = MaterialTheme.typography.titleMedium)
         OpcaoGrande(
             "Resolvido",
@@ -490,6 +578,65 @@ fun ConteudoConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao) {
             }
         }
         FimDaRolagem()
+    }
+}
+
+/**
+ * O que a vistoria deixou para depois, e quem volta. Só aparece quando há item
+ * marcado — o agendar é uma coisa só, no fim, e não item por item.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BlocoVisitaDeVolta(ordem: Ordem, form: FormConclusao, tecnicos: List<Pessoa>, agora: LocalDateTime, acoes: AcoesExecucao) {
+    val deixados = ordem.checklist.filter { it.agendar }
+    if (deixados.isEmpty()) return
+    val hoje = agora.date
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text("Visita de volta", style = MaterialTheme.typography.titleMedium)
+            Text(
+                if (deixados.size == 1) "Ficou para depois:" else "Ficaram para depois:",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            deixados.forEach { Text("• " + it.descricao, style = MaterialTheme.typography.bodyLarge) }
+
+            Text("Quem volta", style = MaterialTheme.typography.titleSmall)
+            if (tecnicos.isEmpty()) {
+                Text(
+                    "A lista de técnicos ainda não chegou a este celular. Conclua assim mesmo: o escritório agenda a visita de volta.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    tecnicos.forEach { t ->
+                        FilterChip(
+                            selected = form.tecnicoId == t.id,
+                            onClick = { acoes.aoMudarConclusao(form.copy(tecnicoId = t.id)) },
+                            label = { Text(t.nome) },
+                        )
+                    }
+                }
+            }
+
+            Text("Quando", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = form.dia == null,
+                    onClick = { acoes.aoMudarConclusao(form.copy(dia = null)) },
+                    label = { Text("Sem dia — o escritório marca") },
+                )
+                (1L..6L).forEach { n ->
+                    val d = hoje.plusDays(n)
+                    FilterChip(
+                        selected = form.dia == d.toString(),
+                        onClick = { acoes.aoMudarConclusao(form.copy(dia = d.toString())) },
+                        label = { Text(Datas.rotuloDia(d, hoje)) },
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -542,7 +689,7 @@ private fun BlocoAssinatura(ordem: Ordem, form: FormConclusao, acoes: AcoesExecu
             OutlinedButton(
                 onClick = acoes.aoAbrirAssinatura,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
             ) {
                 Icon(Icons.Outlined.Draw, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Coletar a assinatura do cliente", modifier = Modifier.padding(start = 8.dp))
@@ -557,10 +704,13 @@ fun BarraConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao) {
     val form = estado.conclusao
     val impedimentos = RegrasOs.impedimentos(ordem, form.resolvido, form.laudo, ordem.temAssinatura)
     val pendentes = ordem.obrigatoriosPendentes.size
+    // Item deixado para depois pede quem volta — se o celular já conhece a lista de técnicos.
+    val faltaQuemVolta = ordem.checklist.any { it.agendar } && estado.tecnicos.isNotEmpty() && form.tecnicoId == null
     // Curto: a lista do que falta já está na tela, logo acima.
     val aviso = when {
         pendentes == 1 -> "Falta 1 item obrigatório"
         pendentes > 1 -> "Faltam $pendentes itens obrigatórios"
+        faltaQuemVolta -> "Escolha quem volta para os itens deixados"
         else -> impedimentos.firstOrNull()
     }
     BarraDoPasso(aviso = aviso) {
@@ -572,7 +722,7 @@ fun BarraConclusao(estado: ExecucaoEstado, acoes: AcoesExecucao) {
             acoes.aoConcluir,
             Modifier.weight(1f),
             carregando = estado.ocupado,
-            habilitado = impedimentos.isEmpty() && Roteiro.podeResponder(ordem),
+            habilitado = impedimentos.isEmpty() && !faltaQuemVolta && Roteiro.podeResponder(ordem),
             icone = Icons.Outlined.CheckCircle,
         )
     }
@@ -645,17 +795,17 @@ fun BlocoRelatorio(ordem: Ordem, aoEnviar: () -> Unit, aoCompartilhar: () -> Uni
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (ordem.cliente.telefone != null) {
-                    Button(onClick = aoEnviar, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                    Button(onClick = aoEnviar, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
                         Icon(Icons.AutoMirrored.Outlined.Chat, contentDescription = null, modifier = Modifier.size(20.dp))
                         Text("Mandar no WhatsApp do cliente", modifier = Modifier.padding(start = 8.dp))
                     }
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilledTonalButton(onClick = aoCompartilhar, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f).height(48.dp)) {
+                    FilledTonalButton(onClick = aoCompartilhar, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                         Icon(Icons.Outlined.Share, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Compartilhar", modifier = Modifier.padding(start = 6.dp))
                     }
-                    OutlinedButton(onClick = aoAbrir, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f).height(48.dp)) {
+                    OutlinedButton(onClick = aoAbrir, shape = MaterialTheme.shapes.medium, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
                         Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(18.dp))
                         Text("Abrir PDF", modifier = Modifier.padding(start = 6.dp))
                     }

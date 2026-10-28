@@ -5,9 +5,12 @@ import br.com.selebi.app.nucleo.arquivos.ArquivosOs
 import br.com.selebi.app.nucleo.arquivos.PastasApp
 import br.com.selebi.app.nucleo.arquivos.ProcessadorFotosAndroid
 import br.com.selebi.app.nucleo.rede.ErroHttp
+import br.com.selebi.app.nucleo.banco.AnexoEntidade
 import br.com.selebi.app.nucleo.banco.PendenteEntidade
 import br.com.selebi.app.nucleo.banco.SelebiBanco
 import br.com.selebi.app.nucleo.banco.paraModelo
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
+import br.com.selebi.app.nucleo.modelo.MotivoEspera
 import br.com.selebi.app.nucleo.modelo.Ordem
 import br.com.selebi.app.nucleo.modelo.Resposta
 import br.com.selebi.app.nucleo.modelo.StatusOs
@@ -109,6 +112,7 @@ class FilaEnvioTest {
         parede: JsonElement? = null,
         anexos: List<AnexoDto> = emptyList(),
         notas: List<NotaDto> = emptyList(),
+        itens: List<ItemChecklistDto>? = null,
     ) = OrdemDto(
         id = "os1",
         numero = 1,
@@ -117,7 +121,7 @@ class FilaEnvioTest {
         descricao = "Vistoria de teste",
         criadoEm = "2026-09-20T10:00:00.000Z",
         cliente = ClienteDto("c1", "Cliente Teste"),
-        checklist = listOf(
+        checklist = itens ?: listOf(
             ItemChecklistDto("i1", 1, "Disjuntor — amperagem", obrigatorio = true, concluido = disjuntorOk, tipoResposta = "numero", fotosMinimas = 1, unidade = "A", valor = disjuntor),
             ItemChecklistDto("i2", 2, "Vai precisar rasgar parede?", obrigatorio = true, concluido = parede != null, tipoResposta = "sim_nao", valor = parede),
         ),
@@ -126,12 +130,21 @@ class FilaEnvioTest {
         atualizadoEm = versao,
     )
 
-    private fun resposta(itemId: String, valor: Resposta?, usuario: String = "u1") = PendenteEntidade(
+    private fun resposta(
+        itemId: String,
+        valor: Resposta?,
+        usuario: String = "u1",
+        observacao: String? = null,
+        agendar: Boolean? = null,
+    ) = PendenteEntidade(
         idCliente = UUID.randomUUID().toString(),
         ordemId = "os1",
         usuarioId = usuario,
         tipo = TipoPendente.RESPOSTA,
-        corpoJson = json.encodeToString(RespostaPedido.serializer(), RespostaPedido(valor.paraJson(), null, Datas.agoraMesmo().toString())),
+        corpoJson = json.encodeToString(
+            RespostaPedido.serializer(),
+            RespostaPedido(valor.paraJson(), observacao, Datas.agoraMesmo().toString(), agendar),
+        ),
         itemId = itemId,
         criadoEm = relogio++,
     )
@@ -283,6 +296,85 @@ class FilaEnvioTest {
         // O técnico viu e descartou.
         pendentes.forEach { fila.descartar(it.idCliente) }
         assertTrue(banco.pendentes().todos().isEmpty())
+    }
+
+    @Test
+    fun `a fila diz por que esta esperando e limpa quando sobe`() = runBlocking {
+        copia.gravarTodas(listOf(dto()))
+        fila.enfileirar(resposta("i2", Resposta.Marcado(true)))
+        assertNull(fila.espera.value)
+
+        api.aoResponder = { _, _ -> throw IOException("sem rede") }
+        assertEquals(ResultadoEnvio.TENTAR_DE_NOVO, fila.enviar("u1"))
+        assertEquals(EsperaEnvio(MotivoEspera.SEM_SINAL), fila.espera.value)
+
+        // Com internet ligada mas o servidor dando erro, a tela precisa dizer isso, com o número.
+        api.aoResponder = { _, _ -> throw recusa(500, "interno", "Erro interno.") }
+        assertEquals(ResultadoEnvio.TENTAR_DE_NOVO, fila.enviar("u1"))
+        assertEquals(EsperaEnvio(MotivoEspera.SERVIDOR, 500), fila.espera.value)
+
+        api.aoResponder = { _, _ -> RespostaItemResposta(dto(versao = "2026-09-25T12:01:00.000Z"), avisos = emptyList()) }
+        assertEquals(ResultadoEnvio.TUDO_ENVIADO, fila.enviar("u1"))
+        assertNull(fila.espera.value)
+    }
+
+    @Test
+    fun `sessao vencida limpa o motivo da espera`() = runBlocking {
+        copia.gravarTodas(listOf(dto()))
+        fila.enfileirar(resposta("i2", Resposta.Marcado(true)))
+        api.aoResponder = { _, _ -> throw IOException("sem rede") }
+        fila.enviar("u1")
+        assertNotNull(fila.espera.value)
+
+        api.aoResponder = { _, _ -> throw recusa(401, "sessao_invalida", "Entre de novo.") }
+        assertEquals(ResultadoEnvio.SEM_SESSAO, fila.enviar("u1"))
+        assertNull(fila.espera.value)
+    }
+
+    @Test
+    fun `observacao obrigatoria e agendar valem na tela na hora e sobem no pedido`() = runBlocking {
+        val aterramento = ItemChecklistDto(
+            "i3", 3, "Aterramento", obrigatorio = true, tipoResposta = "escolha",
+            opcoes = listOf("Existe e está bom", "Não existe"), fotosMinimas = 1, exigeObservacao = "sempre",
+        )
+        val sombra = ItemChecklistDto(
+            "i4", 4, "Sombra sobre o telhado", obrigatorio = true, tipoResposta = "escolha",
+            opcoes = listOf("Sem sombra", "Muita sombra"), fotosMinimas = 1, exigeObservacao = "sem_foto", permiteAgendar = true,
+        )
+        copia.gravarTodas(listOf(dto(itens = listOf(aterramento, sombra))))
+        // A foto do aterramento já está no celular.
+        banco.ordens().salvarAnexos(
+            listOf(AnexoEntidade("a1", "os1", "i3", "foto", Datas.agoraMesmo().toString(), pendente = true, enviadoPorId = "u1")),
+        )
+        suspend fun item(id: String) = ordem().checklist.first { it.id == id }
+
+        // Com a foto, mas sem a observação que o item sempre pede: não está cumprido.
+        fila.enfileirar(resposta("i3", Resposta.Texto("Não existe")))
+        assertFalse(item("i3").concluido)
+        // A observação chega junto: cumprido, e o pedido leva a observação.
+        fila.enfileirar(resposta("i3", Resposta.Texto("Não existe"), observacao = "Sem haste no poste."))
+        assertTrue(item("i3").concluido)
+        assertEquals("Sem haste no poste.", item("i3").observacao)
+
+        // Sem foto, a explicação vale no lugar dela; "agendar" também deixa o item cumprido.
+        fila.enfileirar(resposta("i4", null, agendar = true))
+        assertTrue(item("i4").concluido)
+        assertTrue(item("i4").agendar)
+
+        // Responder o item de verdade tira ele da visita de volta, e sem foto nem explicação não cumpre.
+        fila.enfileirar(resposta("i4", Resposta.Texto("Muita sombra"), agendar = false))
+        assertFalse(item("i4").agendar)
+        assertFalse(item("i4").concluido)
+
+        // O que sobe para o servidor leva o estado inteiro.
+        val enviados = mutableMapOf<String, RespostaPedido>()
+        api.aoResponder = { itemId, pedido ->
+            enviados[itemId] = pedido
+            RespostaItemResposta(dto(itens = listOf(aterramento, sombra), versao = "2026-09-25T12:09:00.000Z"))
+        }
+        assertEquals(ResultadoEnvio.TUDO_ENVIADO, fila.enviar("u1"))
+        assertEquals("Sem haste no poste.", enviados.getValue("i3").observacao)
+        assertEquals(false, enviados.getValue("i4").agendar)
     }
 
     @Test

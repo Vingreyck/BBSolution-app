@@ -4,15 +4,18 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,6 +35,7 @@ import androidx.compose.material.icons.outlined.TaskAlt
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material.icons.outlined.WaterDrop
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -227,8 +231,16 @@ fun CartaoOrdem(
                 IconeTipo(ordem.tipo)
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        // Sem espaço, é o tipo que perde o fim — o número da OS é o que o técnico procura.
                         Text(
-                            "${ordem.numeroFormatado} · ${ordem.tipo.rotulo}",
+                            ordem.numeroFormatado,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                        Text(
+                            " · ${ordem.tipo.rotulo}",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.weight(1f),
@@ -282,12 +294,46 @@ fun CartaoOrdem(
 }
 
 /**
+ * Um dos botões do cartão grande. As três caixas dividem a largura por igual, e
+ * num iPhone estreito (ou com letra grande) cada uma sobra com uns 90 dp: a
+ * palavra quebrava letra por letra ("Rota" virava "Rot" e "a"). Por isso a
+ * margem é pequena, a palavra nunca quebra, e o ícone sai quando não cabe.
+ */
+@Composable
+private fun BotaoDoCartao(
+    texto: String,
+    icone: ImageVector,
+    aoClicar: () -> Unit,
+    contorno: BorderStroke,
+    cores: ButtonColors,
+    modifier: Modifier = Modifier,
+) {
+    BoxWithConstraints(modifier) {
+        val comIcone = maxWidth >= 92.dp
+        OutlinedButton(
+            onClick = aoClicar,
+            border = contorno,
+            colors = cores,
+            contentPadding = PaddingValues(horizontal = 8.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        ) {
+            if (comIcone) {
+                Icon(icone, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(4.dp))
+            }
+            Text(texto, maxLines = 1, softWrap = false)
+        }
+    }
+}
+
+/**
  * O cartão grande do topo: a OS da vez.
  *
  * Os três botões são as três primeiras coisas que o técnico faz com ela —
  * abrir o mapa, ligar para o cliente avisando que está chegando, abrir a OS.
  * Grandes, embaixo, ao alcance do polegar.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CartaoDestaque(
     destaque: Destaque,
@@ -316,10 +362,15 @@ fun CartaoDestaque(
         colors = CardDefaults.cardColors(containerColor = esquema.primaryContainer, contentColor = esquema.onPrimaryContainer),
     ) {
         Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // Em tela estreita o número passa para a linha de baixo, em vez de ser partido letra por letra.
+            FlowRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                itemVerticalAlignment = Alignment.CenterVertically,
+            ) {
                 Pilula(etiqueta.uppercase(), fundo = corEtiqueta, frente = if (destaque.tipo == TipoDestaque.ATRASADA) Color.White else esquema.onPrimary)
-                Spacer(Modifier.weight(1f))
-                Text(ordem.numeroFormatado, style = MaterialTheme.typography.labelLarge)
+                Text(ordem.numeroFormatado, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconeTipo(ordem.tipo, tamanho = 48.dp)
@@ -335,19 +386,15 @@ fun CartaoDestaque(
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 val contorno = BorderStroke(1.dp, esquema.onPrimaryContainer.copy(alpha = 0.35f))
                 val coresContorno = ButtonDefaults.outlinedButtonColors(contentColor = esquema.onPrimaryContainer)
-                OutlinedButton(onClick = aoRota, border = contorno, colors = coresContorno, modifier = Modifier.weight(1f).height(48.dp)) {
-                    Icon(Icons.Outlined.Directions, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Rota")
-                }
+                BotaoDoCartao("Rota", Icons.Outlined.Directions, aoRota, contorno, coresContorno, Modifier.weight(1f))
                 if (ordem.cliente.telefone != null) {
-                    OutlinedButton(onClick = aoLigar, border = contorno, colors = coresContorno, modifier = Modifier.weight(1f).height(48.dp)) {
-                        Icon(Icons.Outlined.Call, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Ligar")
-                    }
+                    BotaoDoCartao("Ligar", Icons.Outlined.Call, aoLigar, contorno, coresContorno, Modifier.weight(1f))
                 }
-                Button(onClick = aoAbrir, modifier = Modifier.weight(1f).height(48.dp)) { Text("Abrir") }
+                Button(
+                    onClick = aoAbrir,
+                    contentPadding = PaddingValues(horizontal = 8.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 48.dp),
+                ) { Text("Abrir", maxLines = 1, softWrap = false) }
             }
         }
     }

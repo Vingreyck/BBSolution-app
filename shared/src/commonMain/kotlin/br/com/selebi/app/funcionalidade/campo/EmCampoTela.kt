@@ -3,15 +3,22 @@ package br.com.selebi.app.funcionalidade.campo
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -42,6 +49,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import br.com.selebi.app.nucleo.plataforma.rememberAcoesExternas
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -309,32 +318,46 @@ private fun AcoesDoEscolhido(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilledTonalButton(onClick = { aoAbrirOs(t.ordemId) }, modifier = Modifier.weight(1f).height(44.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
-                Icon(Icons.AutoMirrored.Outlined.OpenInNew, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("OS ${t.numeroFormatado}", modifier = Modifier.padding(start = 6.dp))
-            }
-            OutlinedButton(
-                onClick = { aoAbrirNoMaps(t) },
-                enabled = t.posicao != null,
-                modifier = Modifier.weight(1f).height(44.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Icon(Icons.Outlined.Directions, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("Maps", modifier = Modifier.padding(start = 6.dp))
-            }
-            OutlinedButton(
-                onClick = { aoLigarCliente(t) },
-                enabled = t.telefone != null,
-                modifier = Modifier.weight(1f).height(44.dp),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-            ) {
-                Icon(Icons.Outlined.Call, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("Cliente", modifier = Modifier.padding(start = 6.dp))
-            }
+            BotaoDaLinha("OS ${t.numeroFormatado}", Icons.AutoMirrored.Outlined.OpenInNew, { aoAbrirOs(t.ordemId) }, Modifier.weight(1f), tonal = true)
+            BotaoDaLinha("Maps", Icons.Outlined.Directions, { aoAbrirNoMaps(t) }, Modifier.weight(1f), habilitado = t.posicao != null)
+            BotaoDaLinha("Cliente", Icons.Outlined.Call, { aoLigarCliente(t) }, Modifier.weight(1f), habilitado = t.telefone != null)
         }
     }
 }
 
+/**
+ * Um dos três botões lado a lado. Cada um tem uns 90 dp numa tela estreita; a palavra
+ * não quebra ("OS #004 / 9"), e o ícone sai quando falta largura.
+ */
+@Composable
+private fun BotaoDaLinha(
+    texto: String,
+    icone: ImageVector,
+    aoClicar: () -> Unit,
+    modifier: Modifier,
+    habilitado: Boolean = true,
+    tonal: Boolean = false,
+) {
+    BoxWithConstraints(modifier) {
+        val comIcone = maxWidth >= 104.dp * LocalDensity.current.fontScale
+        val margem = PaddingValues(horizontal = if (comIcone) 8.dp else 4.dp)
+        val conteudo: @Composable RowScope.() -> Unit = {
+            if (comIcone) {
+                Icon(icone, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+            }
+            Text(texto, maxLines = 1, softWrap = false)
+        }
+        val tamanho = Modifier.fillMaxWidth().heightIn(min = 44.dp)
+        if (tonal) {
+            FilledTonalButton(onClick = aoClicar, enabled = habilitado, modifier = tamanho, contentPadding = margem, content = conteudo)
+        } else {
+            OutlinedButton(onClick = aoClicar, enabled = habilitado, modifier = tamanho, contentPadding = margem, content = conteudo)
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CartaoEmCampo(t: TecnicoEmCampo, agora: Instant, escolhido: Boolean, aoTocar: () -> Unit) {
     val c = SelebiTema.cores
@@ -367,7 +390,12 @@ fun CartaoEmCampo(t: TecnicoEmCampo, agora: Instant, escolhido: Boolean, aoTocar
                     )
                     Text("● " + Campo.textoFrescor(p, agora), style = MaterialTheme.typography.labelMedium, color = corFrescor)
                 }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Se não couber na linha, "#0049 · Vistoria" desce inteiro, em vez de quebrar letra por letra.
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    itemVerticalAlignment = Alignment.CenterVertically,
+                ) {
                     val caminho = t.status == StatusOs.EM_DESLOCAMENTO
                     Pilula(
                         t.status.rotulo,
@@ -378,6 +406,8 @@ fun CartaoEmCampo(t: TecnicoEmCampo, agora: Instant, escolhido: Boolean, aoTocar
                         "${t.numeroFormatado} · ${t.tipo.rotulo}",
                         style = MaterialTheme.typography.labelLarge,
                         color = esquema.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
                     )
                 }
                 Text(t.clienteNome, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -388,7 +418,7 @@ fun CartaoEmCampo(t: TecnicoEmCampo, agora: Instant, escolhido: Boolean, aoTocar
                     if (frescor != Frescor.SEM_SINAL) p?.kmh?.let { add("$it km/h") }
                 }
                 Text(detalhes.joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = esquema.onSurfaceVariant)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     t.desde?.let {
                         Text(
                             (if (t.status == StatusOs.EM_DESLOCAMENTO) "Saiu às " else "Chegou às ") + hora(it),
@@ -399,6 +429,8 @@ fun CartaoEmCampo(t: TecnicoEmCampo, agora: Instant, escolhido: Boolean, aoTocar
                     p?.bateria?.let { b ->
                         Text(
                             "bateria $b%",
+                            maxLines = 1,
+                            softWrap = false,
                             style = MaterialTheme.typography.labelMedium,
                             color = if (b <= 15) c.perigo else esquema.onSurfaceVariant,
                             fontWeight = if (b <= 15) FontWeight.SemiBold else FontWeight.Normal,

@@ -179,7 +179,7 @@ fun PerfilConteudo(
                 )
             }
             Text(
-                "BBSolution para $nomeDoSistema · versão ${Ambiente.versao}",
+                "BBSolution para $nomeDoSistema · versão ${Ambiente.versaoCompleta}",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,

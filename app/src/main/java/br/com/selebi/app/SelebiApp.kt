@@ -23,6 +23,7 @@ class SelebiApp : Application(), Configuration.Provider {
     val nucleo: Nucleo by lazy {
         Ambiente.apiUrl = BuildConfig.API_URL
         Ambiente.versao = BuildConfig.VERSION_NAME
+        Ambiente.build = BuildConfig.VERSION_CODE.toString()
         montarNucleoAndroid(this, agendador = { AgendadorWorkManager(this, it.escopo) }, motor = MotorRastreioAndroid(this))
     }
 

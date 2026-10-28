@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -48,9 +49,12 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
+import br.com.selebi.app.nucleo.plataforma.enviaComOAppFechado
 import br.com.selebi.app.nucleo.modelo.Ordem
 import br.com.selebi.app.nucleo.modelo.RegrasOs
 import br.com.selebi.app.nucleo.util.Datas
+import br.com.selebi.app.nucleo.design.componentes.fecharTecladoAoTocarFora
 
 /*
  * As folhas que sobem de baixo durante a execução. Todas pedem pouco e
@@ -78,7 +82,7 @@ fun FolhaMotivo(
     val faltaDetalhe = escolhido == "Outro" && detalhe.isBlank()
     ModalBottomSheet(onDismissRequest = aoFechar, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(),
+            Modifier.fillMaxWidth().fecharTecladoAoTocarFora().padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Text(titulo, style = MaterialTheme.typography.titleLarge)
@@ -104,7 +108,7 @@ fun FolhaMotivo(
                 } else {
                     ButtonDefaults.buttonColors()
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             ) { Text(botao) }
         }
     }
@@ -210,6 +214,7 @@ fun FolhaFila(
     aoDescartar: (String) -> Unit,
     aoEnviarAgora: () -> Unit,
     aoFechar: () -> Unit,
+    espera: EsperaEnvio? = null,
 ) {
     val c = SelebiTema.cores
     val esperando = envios.count { !it.recusado }
@@ -222,12 +227,7 @@ fun FolhaFila(
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text("Envios deste celular", style = MaterialTheme.typography.titleLarge)
                     Text(
-                        when {
-                            envios.isEmpty() -> "Tudo o que você fez nesta OS já está no BBSolution."
-                            !online -> "Sem sinal agora. Está tudo guardado aqui e sobe sozinho quando a conexão voltar — mesmo com o app fechado."
-                            esperando > 0 -> "Subindo. Não precisa esperar com o app aberto."
-                            else -> "O servidor recusou o que está abaixo. Veja o motivo e descarte."
-                        },
+                        Roteiro.resumoDaFila(envios, online, espera, enviaComOAppFechado),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -267,7 +267,7 @@ fun FolhaFila(
             }
             if (esperando > 0 && online) {
                 item {
-                    OutlinedButton(onClick = aoEnviarAgora, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().height(48.dp)) {
+                    OutlinedButton(onClick = aoEnviarAgora, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
                         Text("Tentar enviar agora")
                     }
                 }
@@ -284,7 +284,7 @@ fun FolhaNota(aoSalvar: (String) -> Unit, aoFechar: () -> Unit) {
     var texto by rememberSaveable { mutableStateOf("") }
     ModalBottomSheet(onDismissRequest = aoFechar, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(),
+            Modifier.fillMaxWidth().fecharTecladoAoTocarFora().padding(horizontal = 20.dp).padding(bottom = 16.dp).imePadding(),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text("Nota para o escritório", style = MaterialTheme.typography.titleLarge)
@@ -306,7 +306,7 @@ fun FolhaNota(aoSalvar: (String) -> Unit, aoFechar: () -> Unit) {
                 onClick = { aoSalvar(texto) },
                 enabled = texto.isNotBlank(),
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
+                modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
             ) { Text("Guardar nota") }
         }
     }

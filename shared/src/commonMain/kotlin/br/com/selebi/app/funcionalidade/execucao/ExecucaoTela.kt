@@ -71,6 +71,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import br.com.selebi.app.funcionalidade.ordens.AcoesOs
 import br.com.selebi.app.navegacao.RotaExecucao
 import br.com.selebi.app.nucleo.design.componentes.EstadoVazio
+import br.com.selebi.app.nucleo.design.componentes.fecharTecladoAoTocarFora
 import br.com.selebi.app.nucleo.design.componentes.LocalCarregadorMiniatura
 import br.com.selebi.app.nucleo.design.tema.SelebiTema
 import br.com.selebi.app.nucleo.modelo.AcaoOs
@@ -82,6 +83,7 @@ import br.com.selebi.app.nucleo.modelo.SituacaoEnvio
 import br.com.selebi.app.nucleo.plataforma.VoltarDoSistema
 import br.com.selebi.app.nucleo.plataforma.rememberAcoesExternas
 import br.com.selebi.app.nucleo.plataforma.rememberCamera
+import br.com.selebi.app.nucleo.plataforma.rememberCameraVideo
 import br.com.selebi.app.nucleo.plataforma.rememberGaleria
 import br.com.selebi.app.nucleo.plataforma.rememberLeitorCodigo
 import br.com.selebi.app.nucleo.plataforma.rememberPedidoLocalizacao
@@ -106,7 +108,10 @@ class AcoesExecucao(
     val aoResponder: (ItemChecklist, Resposta?) -> Unit = { _, _ -> },
     val aoObservar: (ItemChecklist, String) -> Unit = { _, _ -> },
     val aoCamera: (String?) -> Unit = {},
+    val aoVideo: (String?) -> Unit = {},
     val aoGaleria: (String?) -> Unit = {},
+    /** Deixa o item para a visita de volta (`true`) ou desfaz (`false`). */
+    val aoDeixarParaDepois: (ItemChecklist, Boolean) -> Unit = { _, _ -> },
     val aoRemoverFoto: (AnexoOs) -> Unit = {},
     val aoLerCodigo: LeitorDeCodigo = { it(null) },
     val aoAgir: (AcaoOs, String?) -> Unit = { _, _ -> },
@@ -164,6 +169,7 @@ fun ExecucaoTela(
 
     // A marca é o item do checklist ("" = foto avulsa); volta junto com a foto.
     val camera = rememberCamera { marca, foto -> vm.fotoTirada(marca.ifEmpty { null }, foto) }
+    val video = rememberCameraVideo { marca, gravado -> vm.videoGravado(marca.ifEmpty { null }, gravado) }
     val galeria = rememberGaleria { marca, foto -> if (foto != null) vm.fotoDaGaleria(marca.ifEmpty { null }, foto) }
     val leitor = rememberLeitorCodigo(
         aoFalhar = { escopo.launch { rodape.showSnackbar("O leitor não abriu neste celular. Digite o número da etiqueta.") } },
@@ -205,6 +211,8 @@ fun ExecucaoTela(
         aoResponder = vm::responder,
         aoObservar = vm::observar,
         aoCamera = { itemId -> camera(itemId.orEmpty()) },
+        aoVideo = { itemId -> video(itemId.orEmpty()) },
+        aoDeixarParaDepois = vm::deixarParaDepois,
         aoGaleria = { itemId -> galeria(itemId.orEmpty()) },
         aoRemoverFoto = vm::removerFoto,
         aoLerCodigo = leitor,
@@ -332,7 +340,7 @@ fun ExecucaoConteudo(
         snackbarHost = { SnackbarHost(rodape) },
         containerColor = MaterialTheme.colorScheme.surface,
     ) { espaco ->
-        Box(Modifier.fillMaxSize().padding(espaco)) {
+        Box(Modifier.fillMaxSize().padding(espaco).fecharTecladoAoTocarFora()) {
             when {
                 !estado.carregado -> CircularProgressIndicator(Modifier.align(Alignment.Center))
                 ordem == null -> EstadoVazio(
@@ -356,7 +364,7 @@ fun ExecucaoConteudo(
                         is Passo.Item -> ordem.checklist.firstOrNull { it.id == p.itemId }?.let {
                             ConteudoItem(estado, it, acoes) { foto -> fotoAberta = foto }
                         }
-                        Passo.Conclusao -> ConteudoConclusao(estado, acoes)
+                        Passo.Conclusao -> ConteudoConclusao(estado, acoes, agora)
                         null -> Unit
                     }
                 }
@@ -367,7 +375,7 @@ fun ExecucaoConteudo(
     if (ordem != null) {
         when (camada) {
             Camada.INDICE -> FolhaIndice(ordem, estado.passo, { aoMudarCamada(Camada.NADA); acoes.aoIrPara(it) }, { aoMudarCamada(Camada.NADA) })
-            Camada.FILA -> FolhaFila(estado.envios, ordem, estado.online, acoes.aoDescartar, acoes.aoEnviarAgora) { aoMudarCamada(Camada.NADA) }
+            Camada.FILA -> FolhaFila(estado.envios, ordem, estado.online, acoes.aoDescartar, acoes.aoEnviarAgora, { aoMudarCamada(Camada.NADA) }, estado.espera)
             Camada.NOTA -> FolhaNota(
                 aoSalvar = { texto -> acoes.aoAnotar(texto) { aoMudarCamada(Camada.NADA) } },
                 aoFechar = { aoMudarCamada(Camada.NADA) },

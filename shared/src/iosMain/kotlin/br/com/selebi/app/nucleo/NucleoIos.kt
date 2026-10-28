@@ -36,6 +36,7 @@ import platform.UIKit.UIApplicationDidEnterBackgroundNotification
  */
 fun montarNucleoIos(): Nucleo {
     Ambiente.versao = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: Ambiente.versao
+    Ambiente.build = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String ?: ""
 
     val dados = pasta(NSApplicationSupportDirectory) + "/selebi"
     val cache = pasta(NSCachesDirectory) + "/selebi"

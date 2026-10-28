@@ -17,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import br.com.selebi.app.nucleo.design.componentes.fecharTecladoAoTocarFora
 
 /**
  * A moldura das telas de entrada: coluna rolável que sobe com o teclado e
@@ -39,6 +40,7 @@ fun LayoutAcesso(
                 .padding(espaco)
                 .consumeWindowInsets(espaco)
                 .imePadding()
+                .fecharTecladoAoTocarFora()
                 .verticalScroll(rememberScrollState()),
             contentAlignment = Alignment.TopCenter,
         ) {

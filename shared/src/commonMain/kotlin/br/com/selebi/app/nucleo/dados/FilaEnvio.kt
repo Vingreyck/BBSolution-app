@@ -9,6 +9,8 @@ import br.com.selebi.app.nucleo.banco.OrdemDao
 import br.com.selebi.app.nucleo.banco.PendenteDao
 import br.com.selebi.app.nucleo.banco.PendenteEntidade
 import br.com.selebi.app.nucleo.banco.SelebiBanco
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
+import br.com.selebi.app.nucleo.modelo.MotivoEspera
 import br.com.selebi.app.nucleo.rede.AcaoPedido
 import br.com.selebi.app.nucleo.rede.ArquivoEnvio
 import br.com.selebi.app.nucleo.rede.ErroApp
@@ -19,6 +21,9 @@ import br.com.selebi.app.nucleo.rede.RespostaPedido
 import br.com.selebi.app.nucleo.rede.Resultado
 import br.com.selebi.app.nucleo.rede.SelebiApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
@@ -69,6 +74,14 @@ class FilaEnvio(
     private val agendador: AgendadorEnvio,
 ) {
     private val trava = Mutex()
+
+    private val _espera = MutableStateFlow<EsperaEnvio?>(null)
+
+    /**
+     * Por que a fila está parada, se está: sem sinal ou erro do servidor. Nulo
+     * quando tudo sobe. Só na memória — o app recém-aberto não sabe até tentar.
+     */
+    val espera: StateFlow<EsperaEnvio?> = _espera.asStateFlow()
 
     fun observarTodos(): Flow<List<PendenteEntidade>> = pendentes.observarTodos()
 
@@ -123,14 +136,19 @@ class FilaEnvio(
             when (val d = enviarUm(p)) {
                 is Desfecho.Aceito -> aceito(p, d)
                 is Desfecho.Recusado -> recusado(p, d.mensagem)
-                Desfecho.Depois -> {
+                is Desfecho.Depois -> {
                     pendentes.contarTentativa(p.idCliente)
+                    _espera.value = d.espera
                     return@withLock ResultadoEnvio.TENTAR_DE_NOVO
                 }
-                Desfecho.SemSessao -> return@withLock ResultadoEnvio.SEM_SESSAO
+                Desfecho.SemSessao -> {
+                    _espera.value = null
+                    return@withLock ResultadoEnvio.SEM_SESSAO
+                }
             }
             p = pendentes.proximo(usuarioId)
         }
+        _espera.value = null
         ResultadoEnvio.TUDO_ENVIADO
     }
 
@@ -139,7 +157,7 @@ class FilaEnvio(
     private sealed interface Desfecho {
         data class Aceito(val ordem: OrdemDto?, val avisos: List<String>, val anexoId: String? = null) : Desfecho
         data class Recusado(val mensagem: String) : Desfecho
-        data object Depois : Desfecho
+        data class Depois(val espera: EsperaEnvio) : Desfecho
         data object SemSessao : Desfecho
     }
 
@@ -169,10 +187,15 @@ class FilaEnvio(
 
     private suspend fun enviarAnexo(p: PendenteEntidade): Desfecho {
         val caminho = p.arquivo?.takeIf { arquivos.temConteudo(it) }
-            ?: return Desfecho.Recusado("A foto sumiu do celular antes de subir. Tire de novo.")
+            ?: return Desfecho.Recusado("A foto (ou o vídeo) sumiu do celular antes de subir. Faça de novo.")
         val dados = json.decodeFromString(AnexoNaFila.serializer(), p.corpoJson)
         val nome = caminho.substringAfterLast('/')
-        val tipo = if (nome.endsWith(".png")) "image/png" else "image/jpeg"
+        val tipo = when (nome.substringAfterLast('.').lowercase()) {
+            "png" -> "image/png"
+            "mp4" -> "video/mp4"
+            "mov" -> "video/quicktime"
+            else -> "image/jpeg"
+        }
         val resultado = executor.executar {
             api.anexar(
                 id = p.ordemId,
@@ -191,15 +214,17 @@ class FilaEnvio(
     private fun <T> desfecho(p: PendenteEntidade, r: Resultado<T>, ok: (T) -> Desfecho): Desfecho = when (r) {
         is Resultado.Ok -> ok(r.valor)
         is Resultado.Falha -> when (val e = r.erro) {
-            ErroApp.SemConexao, ErroApp.TempoEsgotado -> Desfecho.Depois
+            ErroApp.SemConexao, ErroApp.TempoEsgotado -> Desfecho.Depois(EsperaEnvio(MotivoEspera.SEM_SINAL))
             is ErroApp.Servidor -> when {
                 e.status == 401 -> Desfecho.SemSessao
                 // Servidor fora do ar, apressado ou sem o Drive: é esperar.
-                e.status == 408 || e.status == 425 || e.status == 429 || e.status >= 500 -> Desfecho.Depois
+                e.status == 408 || e.status == 425 || e.status == 429 || e.status >= 500 ->
+                    Desfecho.Depois(EsperaEnvio(MotivoEspera.SERVIDOR, e.status))
                 else -> Desfecho.Recusado(e.mensagem)
             }
             // Resposta que o app não entendeu: tenta algumas vezes antes de desistir.
-            is ErroApp.Inesperado -> if (p.tentativas >= 4) Desfecho.Recusado(e.mensagem) else Desfecho.Depois
+            is ErroApp.Inesperado ->
+                if (p.tentativas >= 4) Desfecho.Recusado(e.mensagem) else Desfecho.Depois(EsperaEnvio(MotivoEspera.SERVIDOR))
         }
     }
 

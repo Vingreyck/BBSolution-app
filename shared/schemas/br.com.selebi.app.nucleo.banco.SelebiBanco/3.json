@@ -1,0 +1,696 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 3,
+    "identityHash": "5aa73cfb0a4c541fc081f9c9bd8ea94a",
+    "entities": [
+      {
+        "tableName": "ordem",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `numero` INTEGER NOT NULL, `tipo` TEXT NOT NULL, `status` TEXT NOT NULL, `prioridade` TEXT NOT NULL, `descricao` TEXT NOT NULL, `laudo` TEXT, `agendadaPara` TEXT, `prazoSla` TEXT, `iniciadaEm` TEXT, `concluidaEm` TEXT, `criadoEm` TEXT NOT NULL, `responsavelId` TEXT, `responsavelNome` TEXT, `projetoId` TEXT, `projetoTitulo` TEXT, `resultado` TEXT, `assinaturaNome` TEXT, `instrucoes` TEXT, `exigeAssinatura` INTEGER NOT NULL, `atualizadoEm` TEXT, `relatorio` TEXT, `historicoJson` TEXT NOT NULL, `cliente_id` TEXT NOT NULL, `cliente_nome` TEXT NOT NULL, `cliente_telefone` TEXT, `cliente_endereco` TEXT, `cliente_cidade` TEXT, `cliente_uf` TEXT, `usina_id` TEXT, `usina_nome` TEXT, `usina_potenciaKwp` REAL, `usina_latitude` REAL, `usina_longitude` REAL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "numero",
+            "columnName": "numero",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "prioridade",
+            "columnName": "prioridade",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "laudo",
+            "columnName": "laudo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "agendadaPara",
+            "columnName": "agendadaPara",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "prazoSla",
+            "columnName": "prazoSla",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "iniciadaEm",
+            "columnName": "iniciadaEm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "concluidaEm",
+            "columnName": "concluidaEm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "responsavelId",
+            "columnName": "responsavelId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "responsavelNome",
+            "columnName": "responsavelNome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "projetoId",
+            "columnName": "projetoId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "projetoTitulo",
+            "columnName": "projetoTitulo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "resultado",
+            "columnName": "resultado",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "assinaturaNome",
+            "columnName": "assinaturaNome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "instrucoes",
+            "columnName": "instrucoes",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "exigeAssinatura",
+            "columnName": "exigeAssinatura",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atualizadoEm",
+            "columnName": "atualizadoEm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "relatorio",
+            "columnName": "relatorio",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "historicoJson",
+            "columnName": "historicoJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cliente.id",
+            "columnName": "cliente_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cliente.nome",
+            "columnName": "cliente_nome",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cliente.telefone",
+            "columnName": "cliente_telefone",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cliente.endereco",
+            "columnName": "cliente_endereco",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cliente.cidade",
+            "columnName": "cliente_cidade",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "cliente.uf",
+            "columnName": "cliente_uf",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "usina.id",
+            "columnName": "usina_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "usina.nome",
+            "columnName": "usina_nome",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "usina.potenciaKwp",
+            "columnName": "usina_potenciaKwp",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "usina.latitude",
+            "columnName": "usina_latitude",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "usina.longitude",
+            "columnName": "usina_longitude",
+            "affinity": "REAL"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "checklist_item",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ordemId` TEXT NOT NULL, `ordem` INTEGER NOT NULL, `descricao` TEXT NOT NULL, `obrigatorio` INTEGER NOT NULL, `concluido` INTEGER NOT NULL, `observacao` TEXT, `secao` TEXT, `ajuda` TEXT, `tipoResposta` TEXT NOT NULL, `opcoesJson` TEXT NOT NULL, `unidade` TEXT, `fotosMinimas` INTEGER NOT NULL, `apenasCamera` INTEGER NOT NULL, `exigeObservacao` TEXT NOT NULL DEFAULT 'nao', `permiteAgendar` INTEGER NOT NULL DEFAULT 0, `aceitaVideo` INTEGER NOT NULL DEFAULT 0, `agendar` INTEGER NOT NULL DEFAULT 0, `valorJson` TEXT, `respondidoEm` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`ordemId`) REFERENCES `ordem`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordem",
+            "columnName": "ordem",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descricao",
+            "columnName": "descricao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "obrigatorio",
+            "columnName": "obrigatorio",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "concluido",
+            "columnName": "concluido",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "observacao",
+            "columnName": "observacao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "secao",
+            "columnName": "secao",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "ajuda",
+            "columnName": "ajuda",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "tipoResposta",
+            "columnName": "tipoResposta",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "opcoesJson",
+            "columnName": "opcoesJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "unidade",
+            "columnName": "unidade",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "fotosMinimas",
+            "columnName": "fotosMinimas",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "apenasCamera",
+            "columnName": "apenasCamera",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "exigeObservacao",
+            "columnName": "exigeObservacao",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'nao'"
+          },
+          {
+            "fieldPath": "permiteAgendar",
+            "columnName": "permiteAgendar",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "aceitaVideo",
+            "columnName": "aceitaVideo",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "agendar",
+            "columnName": "agendar",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "valorJson",
+            "columnName": "valorJson",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "respondidoEm",
+            "columnName": "respondidoEm",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_checklist_item_ordemId",
+            "unique": false,
+            "columnNames": [
+              "ordemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_checklist_item_ordemId` ON `${TABLE_NAME}` (`ordemId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "ordem",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "ordemId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "anexo",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ordemId` TEXT NOT NULL, `itemId` TEXT, `categoria` TEXT NOT NULL, `capturadoEm` TEXT, `arquivoLocal` TEXT, `pendente` INTEGER NOT NULL, `enviadoPorId` TEXT, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categoria",
+            "columnName": "categoria",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturadoEm",
+            "columnName": "capturadoEm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "arquivoLocal",
+            "columnName": "arquivoLocal",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendente",
+            "columnName": "pendente",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "enviadoPorId",
+            "columnName": "enviadoPorId",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_anexo_ordemId",
+            "unique": false,
+            "columnNames": [
+              "ordemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_anexo_ordemId` ON `${TABLE_NAME}` (`ordemId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "pendente",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`idCliente` TEXT NOT NULL, `ordemId` TEXT NOT NULL, `usuarioId` TEXT NOT NULL, `tipo` TEXT NOT NULL, `corpoJson` TEXT NOT NULL, `itemId` TEXT, `arquivo` TEXT, `criadoEm` INTEGER NOT NULL, `tentativas` INTEGER NOT NULL, `erro` TEXT, PRIMARY KEY(`idCliente`))",
+        "fields": [
+          {
+            "fieldPath": "idCliente",
+            "columnName": "idCliente",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "corpoJson",
+            "columnName": "corpoJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "itemId",
+            "columnName": "itemId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "arquivo",
+            "columnName": "arquivo",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tentativas",
+            "columnName": "tentativas",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "erro",
+            "columnName": "erro",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "idCliente"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_pendente_ordemId",
+            "unique": false,
+            "columnNames": [
+              "ordemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_pendente_ordemId` ON `${TABLE_NAME}` (`ordemId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "nota",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `ordemId` TEXT NOT NULL, `texto` TEXT NOT NULL, `autorId` TEXT, `autor` TEXT, `criadoEm` TEXT, `pendente` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "texto",
+            "columnName": "texto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autorId",
+            "columnName": "autorId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "autor",
+            "columnName": "autor",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "pendente",
+            "columnName": "pendente",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_nota_ordemId",
+            "unique": false,
+            "columnNames": [
+              "ordemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_nota_ordemId` ON `${TABLE_NAME}` (`ordemId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "aviso",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `ordemId` TEXT NOT NULL, `texto` TEXT NOT NULL, `criadoEm` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "texto",
+            "columnName": "texto",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "criadoEm",
+            "columnName": "criadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_aviso_ordemId",
+            "unique": false,
+            "columnNames": [
+              "ordemId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_aviso_ordemId` ON `${TABLE_NAME}` (`ordemId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "posicao",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `usuarioId` TEXT NOT NULL, `ordemId` TEXT NOT NULL, `latitude` REAL NOT NULL, `longitude` REAL NOT NULL, `precisao` REAL, `velocidade` REAL, `bateria` INTEGER, `modo` TEXT NOT NULL, `capturadoEm` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usuarioId",
+            "columnName": "usuarioId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordemId",
+            "columnName": "ordemId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "precisao",
+            "columnName": "precisao",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "velocidade",
+            "columnName": "velocidade",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "bateria",
+            "columnName": "bateria",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "modo",
+            "columnName": "modo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capturadoEm",
+            "columnName": "capturadoEm",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_posicao_usuarioId",
+            "unique": false,
+            "columnNames": [
+              "usuarioId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_posicao_usuarioId` ON `${TABLE_NAME}` (`usuarioId`)"
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5aa73cfb0a4c541fc081f9c9bd8ea94a')"
+    ]
+  }
+}

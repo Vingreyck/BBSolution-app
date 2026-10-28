@@ -73,6 +73,30 @@ class ArquivosOs(private val pastas: PastasApp, val fotos: ProcessadorFotos) {
         return FotoPronta(destino, dados.capturadoEm, dados.latitude, dados.longitude)
     }
 
+    /**
+     * O vídeo gravado, guardado como `<id>.mp4` (ou `.mov`, no iPhone) na pasta da
+     * OS. Vídeo não se reduz aqui — a câmera já grava curto e em qualidade média
+     * (30 s, uns 10 a 25 MB). Nulo se o arquivo não existe ou veio vazio.
+     */
+    suspend fun guardarVideo(origem: OrigemFoto, ordemId: String, id: String): String? = withContext(Dispatchers.IO) {
+        runCatching {
+            val de = Path(origem.endereco.removePrefix("file://"))
+            if ((SystemFileSystem.metadataOrNull(de)?.size ?: 0L) <= 0L) return@runCatching null
+            val extensao = de.name.substringAfterLast('.', "mp4").lowercase().takeIf { it == "mov" } ?: "mp4"
+            val destino = Path(pastaDa(ordemId), "$id.$extensao")
+            try {
+                SystemFileSystem.atomicMove(de, destino)
+            } catch (_: Exception) {
+                // Outro volume (cartão, pasta do sistema): copia e apaga a origem.
+                SystemFileSystem.source(de).buffered().use { entrada ->
+                    SystemFileSystem.sink(destino).buffered().use { saida -> saida.transferFrom(entrada) }
+                }
+                SystemFileSystem.delete(de, mustExist = false)
+            }
+            destino.toString()
+        }.getOrNull()
+    }
+
     /** A foto crua da câmera é do app e sai depois de preparada; a da galeria é da pessoa e fica. */
     fun descartarOrigem(origem: OrigemFoto) {
         if (origem.temporaria) apagar(origem.endereco)
@@ -100,7 +124,7 @@ class ArquivosOs(private val pastas: PastasApp, val fotos: ProcessadorFotos) {
     /** A foto guardada deste anexo, se ela foi tirada neste celular. */
     fun arquivoDe(ordemId: String, anexoId: String): String? {
         val pasta = Path(raiz, ordemId)
-        return sequenceOf("jpg", "png").map { Path(pasta, "$anexoId.$it") }.firstOrNull { SystemFileSystem.exists(it) }?.toString()
+        return sequenceOf("jpg", "png", "mp4", "mov").map { Path(pasta, "$anexoId.$it") }.firstOrNull { SystemFileSystem.exists(it) }?.toString()
     }
 
     /** O arquivo existe e não está vazio. */

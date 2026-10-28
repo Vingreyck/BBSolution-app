@@ -3,13 +3,17 @@ package br.com.selebi.app.funcionalidade.ordens
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -51,6 +55,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextOverflow
 import br.com.selebi.app.nucleo.plataforma.rememberAcoesExternas
 import androidx.compose.ui.unit.dp
 import br.com.selebi.app.nucleo.vmDoNucleo
@@ -396,18 +402,19 @@ private fun Cabecalho(estado: OrdensEstado, aoAbrirPerfil: () -> Unit, aoAtualiz
 private fun ResumoDoDia(contagem: Contagem, filtro: FiltroOrdens, aoFiltrar: (FiltroOrdens) -> Unit) {
     val c = SelebiTema.cores
     fun alternar(f: FiltroOrdens) = aoFiltrar(if (filtro == f) FiltroOrdens.TODAS else f)
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    // Altura única: "Em campo" pode ocupar duas linhas e os três cartões continuam iguais.
+    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         BlocoResumo(
             "Hoje", contagem.hoje, Icons.Outlined.Today, filtro == FiltroOrdens.HOJE,
-            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
+            MaterialTheme.colorScheme.onSurface, Modifier.weight(1f).fillMaxHeight(),
         ) { alternar(FiltroOrdens.HOJE) }
         BlocoResumo(
             "Atrasadas", contagem.atrasadas, Icons.Outlined.WarningAmber, filtro == FiltroOrdens.ATRASADAS,
-            if (contagem.atrasadas > 0) c.perigo else MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
+            if (contagem.atrasadas > 0) c.perigo else MaterialTheme.colorScheme.onSurface, Modifier.weight(1f).fillMaxHeight(),
         ) { alternar(FiltroOrdens.ATRASADAS) }
         BlocoResumo(
             "Em campo", contagem.emCampo, Icons.Outlined.Engineering, filtro == FiltroOrdens.EM_CAMPO,
-            if (contagem.emCampo > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, Modifier.weight(1f),
+            if (contagem.emCampo > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface, Modifier.weight(1f).fillMaxHeight(),
         ) { alternar(FiltroOrdens.EM_CAMPO) }
     }
 }
@@ -431,10 +438,18 @@ private fun BlocoResumo(
         color = if (selecionado) esquema.primaryContainer else esquema.surfaceContainerLowest,
         border = if (selecionado) BorderStroke(2.dp, esquema.primary) else BorderStroke(1.dp, esquema.outlineVariant.copy(alpha = 0.55f)),
     ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Column(Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
             Icon(icone, contentDescription = null, tint = if (valor > 0) corValor else esquema.onSurfaceVariant, modifier = Modifier.size(20.dp))
             Text("$valor", style = MaterialTheme.typography.headlineMedium, color = corValor)
-            Text(rotulo, style = MaterialTheme.typography.labelMedium, color = esquema.onSurfaceVariant)
+            // "Atrasadas" partido ao meio ("Atrasad / as") é pior que a letra um pouco menor.
+            val letraGrande = LocalDensity.current.fontScale > 1.15f
+            Text(
+                rotulo,
+                style = if (letraGrande) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                color = esquema.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -442,17 +457,25 @@ private fun BlocoResumo(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SeletorEscopo(escopo: EscopoOrdens, aoMudar: (EscopoOrdens) -> Unit) {
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        SegmentedButton(
-            selected = escopo == EscopoOrdens.EQUIPE,
-            onClick = { aoMudar(EscopoOrdens.EQUIPE) },
-            shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-        ) { Text("Toda a equipe") }
-        SegmentedButton(
-            selected = escopo == EscopoOrdens.MINHAS,
-            onClick = { aoMudar(EscopoOrdens.MINHAS) },
-            shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-        ) { Text("Só as minhas") }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // Cada lado precisa de uns 50 dp + a largura do texto, que cresce com a letra do
+        // sistema. Se não couber, sai o "✓" e a letra encolhe — e a palavra não é cortada.
+        val apertado = maxWidth < (100 + 192 * LocalDensity.current.fontScale).dp
+        val estilo = if (apertado) MaterialTheme.typography.labelMedium else MaterialTheme.typography.labelLarge
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            SegmentedButton(
+                selected = escopo == EscopoOrdens.EQUIPE,
+                onClick = { aoMudar(EscopoOrdens.EQUIPE) },
+                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                icon = { if (!apertado) SegmentedButtonDefaults.Icon(escopo == EscopoOrdens.EQUIPE) },
+            ) { Text("Toda a equipe", style = estilo, maxLines = 1, softWrap = false) }
+            SegmentedButton(
+                selected = escopo == EscopoOrdens.MINHAS,
+                onClick = { aoMudar(EscopoOrdens.MINHAS) },
+                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                icon = { if (!apertado) SegmentedButtonDefaults.Icon(escopo == EscopoOrdens.MINHAS) },
+            ) { Text("Só as minhas", style = estilo, maxLines = 1, softWrap = false) }
+        }
     }
 }
 

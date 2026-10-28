@@ -75,8 +75,8 @@ interface OrdemDao {
     @Query("SELECT * FROM checklist_item WHERE id = :id")
     suspend fun buscarItem(id: String): ChecklistItemEntidade?
 
-    /** Fotos do item, as enviadas e as que esperam sinal. */
-    @Query("SELECT COUNT(*) FROM anexo WHERE itemId = :itemId AND categoria = 'foto'")
+    /** Fotos (e vídeos) do item, as enviadas e as que esperam sinal. */
+    @Query("SELECT COUNT(*) FROM anexo WHERE itemId = :itemId AND categoria IN ('foto', 'video')")
     suspend fun contarFotos(itemId: String): Int
 
     /** Os arquivos de foto guardados no celular — para a faxina não apagar nenhum. */
@@ -111,9 +111,16 @@ interface OrdemDao {
 
     @Query(
         "UPDATE checklist_item SET valorJson = :valorJson, observacao = :observacao, concluido = :concluido, " +
-            "respondidoEm = :respondidoEm WHERE id = :id",
+            "agendar = :agendar, respondidoEm = :respondidoEm WHERE id = :id",
     )
-    suspend fun responderLocal(id: String, valorJson: String?, observacao: String?, concluido: Boolean, respondidoEm: String)
+    suspend fun responderLocal(
+        id: String,
+        valorJson: String?,
+        observacao: String?,
+        concluido: Boolean,
+        agendar: Boolean,
+        respondidoEm: String,
+    )
 
     @Query("UPDATE checklist_item SET concluido = :concluido WHERE id = :id")
     suspend fun marcarCumprido(id: String, concluido: Boolean)

@@ -6,6 +6,7 @@ import br.com.selebi.app.nucleo.modelo.ClienteResumo
 import br.com.selebi.app.nucleo.modelo.Coordenada
 import br.com.selebi.app.nucleo.modelo.Envio
 import br.com.selebi.app.nucleo.modelo.EventoOs
+import br.com.selebi.app.nucleo.modelo.ExigeObservacao
 import br.com.selebi.app.nucleo.modelo.ItemChecklist
 import br.com.selebi.app.nucleo.modelo.ModoRastreio
 import br.com.selebi.app.nucleo.modelo.NotaOs
@@ -52,6 +53,9 @@ object AmostrasExecucao {
         opcoes: List<String> = emptyList(),
         unidade: String? = null,
         ajuda: String? = null,
+        exige: ExigeObservacao = ExigeObservacao.NAO,
+        agendavel: Boolean = false,
+        video: Boolean = false,
     ) = ItemChecklist(
         id = id,
         ordem = ordem,
@@ -66,41 +70,44 @@ object AmostrasExecucao {
         unidade = unidade,
         fotosMinimas = fotos,
         apenasCamera = camera,
+        exigeObservacao = exige,
+        permiteAgendar = agendavel,
+        aceitaVideo = video,
     )
 
     /** O roteiro da vistoria — os 12 pontos das 10 vistorias do WhatsApp, em 17 itens. */
     fun itensVistoria(): List<ItemChecklist> = listOf(
-        item("v01", 10, "Cliente e unidade", "Número da unidade consumidora (UC)", TipoResposta.TEXTO, fotos = 1,
+        item("v01", 10, "Cliente e unidade", "Número da unidade consumidora (UC)", TipoResposta.TEXTO, fotos = 1, exige = ExigeObservacao.SEM_FOTO,
             ajuda = "Está na conta de luz. Fotografe a conta inteira, com o nome do titular aparecendo."),
         item("v02", 20, "Cliente e unidade", "Nome do titular da conta de luz", TipoResposta.TEXTO,
             ajuda = "Como está na conta — nem sempre é quem está atendendo, e é o nome que vai no projeto."),
-        item("v03", 30, "Cliente e unidade", "Fachada com o número da casa", TipoResposta.FOTO, fotos = 1, camera = true),
-        item("v04", 40, "Padrão de entrada", "Número do medidor", TipoResposta.TEXTO, fotos = 1, camera = true),
+        item("v03", 30, "Cliente e unidade", "Fachada com o número da casa", TipoResposta.FOTO, fotos = 1, camera = true, exige = ExigeObservacao.SEM_FOTO),
+        item("v04", 40, "Padrão de entrada", "Número do medidor", TipoResposta.TEXTO, fotos = 1, camera = true, exige = ExigeObservacao.SEM_FOTO),
         item("v05", 50, "Padrão de entrada", "Disjuntor do padrão — amperagem", TipoResposta.NUMERO, fotos = 1, camera = true,
-            unidade = "A", ajuda = "Fotografe de perto, com o número legível."),
+            exige = ExigeObservacao.SEM_FOTO, unidade = "A", ajuda = "Fotografe de perto, com o número legível."),
         item("v06", 60, "Padrão de entrada", "Disjuntor do padrão — polos", TipoResposta.ESCOLHA,
             opcoes = listOf("Monopolar", "Bipolar", "Tripolar")),
-        item("v07", 70, "Padrão de entrada", "Bitola do cabo de entrada", TipoResposta.ESCOLHA, fotos = 1, camera = true,
+        item("v07", 70, "Padrão de entrada", "Bitola do cabo de entrada", TipoResposta.ESCOLHA, fotos = 1, camera = true, exige = ExigeObservacao.SEM_FOTO,
             opcoes = listOf("4 mm²", "6 mm²", "10 mm²", "16 mm²", "25 mm²", "35 mm²", "Não deu para ver")),
-        item("v08", 80, "Padrão de entrada", "Aterramento", TipoResposta.ESCOLHA, fotos = 1, camera = true,
+        item("v08", 80, "Padrão de entrada", "Aterramento", TipoResposta.ESCOLHA, fotos = 1, camera = true, exige = ExigeObservacao.SEMPRE,
             opcoes = listOf("Existe e está bom", "Existe, mas precisa refazer", "Não existe")),
         item("v09", 90, "Quadro e cabos", "Vagas livres no quadro de distribuição (QDG)", TipoResposta.NUMERO, fotos = 1,
-            camera = true, unidade = "vagas", ajuda = "Para o disjuntor da usina. Fotografe o quadro aberto."),
+            camera = true, exige = ExigeObservacao.SEMPRE, unidade = "vagas", ajuda = "Para o disjuntor da usina. Fotografe o quadro aberto."),
         item("v10", 100, "Quadro e cabos", "Caminho do cabo até o quadro e distância", TipoResposta.TEXTO, fotos = 1,
-            camera = true, ajuda = "Ex.: \"desce pela parede lateral, uns 15 m até o QDG na cozinha\"."),
-        item("v11", 110, "Quadro e cabos", "Vai precisar rasgar parede?", TipoResposta.SIM_NAO),
-        item("v12", 120, "Telhado", "Tipo de telhado", TipoResposta.ESCOLHA, fotos = 2, camera = true,
+            camera = true, exige = ExigeObservacao.SEM_FOTO, agendavel = true, ajuda = "Ex.: \"desce pela parede lateral, uns 15 m até o QDG na cozinha\"."),
+        item("v11", 110, "Quadro e cabos", "Vai precisar rasgar parede?", TipoResposta.SIM_NAO, exige = ExigeObservacao.SEMPRE),
+        item("v12", 120, "Telhado", "Tipo de telhado", TipoResposta.ESCOLHA, fotos = 2, camera = true, exige = ExigeObservacao.SEM_FOTO,
             opcoes = listOf("Cerâmica", "Colonial", "Fibrocimento", "Metálico", "Laje", "Outro")),
         item("v13", 130, "Telhado", "Estado do telhado", TipoResposta.MULTIPLA,
             opcoes = listOf("Bom", "Telhas quebradas", "Madeiramento comprometido", "Sinais de infiltração"),
             ajuda = "Telha quebrada ou infiltração que já existe precisa ficar registrada antes da instalação."),
-        item("v14", 140, "Telhado", "Sombra sobre o telhado", TipoResposta.ESCOLHA, fotos = 1, camera = true,
+        item("v14", 140, "Telhado", "Sombra sobre o telhado", TipoResposta.ESCOLHA, fotos = 1, camera = true, exige = ExigeObservacao.SEM_FOTO, agendavel = true,
             opcoes = listOf("Sem sombra", "Sombra de manhã", "Sombra à tarde", "Muita sombra")),
-        item("v15", 150, "Telhado", "Espaço útil para os módulos", TipoResposta.NUMERO, unidade = "m²"),
-        item("v16", 160, "Inversor e futuro", "Onde vai ficar o inversor", TipoResposta.TEXTO, fotos = 1, camera = true,
+        item("v15", 150, "Telhado", "Espaço útil para os módulos", TipoResposta.NUMERO, unidade = "m²", agendavel = true),
+        item("v16", 160, "Inversor e futuro", "Onde vai ficar o inversor", TipoResposta.TEXTO, fotos = 1, camera = true, exige = ExigeObservacao.SEMPRE, video = true,
             ajuda = "Lugar ventilado, longe de sol direto e com acesso para manutenção."),
-        item("v17", 170, "Inversor e futuro", "Aumento de consumo previsto", TipoResposta.TEXTO, obrigatorio = false,
-            ajuda = "Ar-condicionado, piscina, carro elétrico… Ex.: \"2 ar-condicionados até o verão\"."),
+        item("v17", 170, "Inversor e futuro", "Aumento de consumo previsto?", TipoResposta.SIM_NAO, exige = ExigeObservacao.SEMPRE,
+            ajuda = "Ar-condicionado, piscina, carro elétrico… Responda e explique na observação."),
     )
 
     private val instrucoesVistoria =

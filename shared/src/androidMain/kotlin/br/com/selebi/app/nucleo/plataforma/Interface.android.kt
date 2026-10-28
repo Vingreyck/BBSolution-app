@@ -1,16 +1,20 @@
 package br.com.selebi.app.nucleo.plataforma
 
 import android.Manifest
+import android.app.Activity
 import android.content.ActivityNotFoundException
+import android.content.ClipData
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Build
+import android.provider.MediaStore
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -102,6 +106,61 @@ actual fun rememberCamera(aoTirar: (marca: String, foto: OrigemFoto?) -> Unit): 
             } catch (_: ActivityNotFoundException) {
                 caminho = null
                 tirar(marca, null)
+            }
+        }
+    }
+}
+
+/**
+ * O vídeo, como a foto: pelo app de câmera do celular, que grava no endereço que
+ * o app entrega. Sem permissão de câmera nem de microfone — a câmera do sistema
+ * é quem grava. 30 s e qualidade média, para o arquivo subir pelo 4G do telhado.
+ */
+private class GravarVideo : ActivityResultContract<Uri, Boolean>() {
+    override fun createIntent(context: Context, input: Uri): Intent =
+        Intent(MediaStore.ACTION_VIDEO_CAPTURE)
+            .putExtra(MediaStore.EXTRA_OUTPUT, input)
+            .putExtra(MediaStore.EXTRA_DURATION_LIMIT, DURACAO_MAXIMA_S)
+            .putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1)
+            .putExtra(MediaStore.EXTRA_SIZE_LIMIT, TAMANHO_MAXIMO_BYTES)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            .apply { clipData = ClipData.newRawUri("", input) }
+
+    override fun parseResult(resultCode: Int, intent: Intent?): Boolean = resultCode == Activity.RESULT_OK
+
+    private companion object {
+        const val DURACAO_MAXIMA_S = 30
+        const val TAMANHO_MAXIMO_BYTES = 45L * 1024 * 1024
+    }
+}
+
+@Composable
+actual fun rememberCameraVideo(aoGravar: (marca: String, video: OrigemFoto?) -> Unit): (marca: String) -> Unit {
+    val contexto = LocalContext.current
+    var caminho by rememberSaveable { mutableStateOf<String?>(null) }
+    var marcaAtual by rememberSaveable { mutableStateOf("") }
+    val gravou by rememberUpdatedState(aoGravar)
+    val lancador = rememberLauncherForActivityResult(GravarVideo()) { ok ->
+        val arquivo = caminho ?: return@rememberLauncherForActivityResult
+        caminho = null
+        if (ok && File(arquivo).length() > 0L) {
+            gravou(marcaAtual, OrigemFoto(arquivo, temporaria = true))
+        } else {
+            File(arquivo).delete()
+            gravou(marcaAtual, null)
+        }
+    }
+    return remember(lancador, contexto) {
+        { marca ->
+            val pasta = File(contexto.cacheDir, "camera").apply { mkdirs() }
+            val arquivo = File(pasta, "${UUID.randomUUID()}.mp4")
+            caminho = arquivo.path
+            marcaAtual = marca
+            try {
+                lancador.launch(FileProvider.getUriForFile(contexto, "${contexto.packageName}.arquivos", arquivo))
+            } catch (_: ActivityNotFoundException) {
+                caminho = null
+                gravou(marca, null)
             }
         }
     }

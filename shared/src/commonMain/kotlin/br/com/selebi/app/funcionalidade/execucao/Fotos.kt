@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.outlined.DeleteOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PhotoLibrary
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -73,11 +75,18 @@ fun SecaoFotos(
     aoGaleria: () -> Unit,
     aoAbrir: (AnexoOs) -> Unit,
     modifier: Modifier = Modifier,
+    /** O item aceita um vídeo curto no lugar (ou além) da foto. */
+    aceitaVideo: Boolean = false,
+    aoVideo: () -> Unit = {},
 ) {
     val c = SelebiTema.cores
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Fotos", style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            Text(
+                if (aceitaVideo) "Foto ou vídeo" else "Fotos",
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.weight(1f),
+            )
             val completo = fotos.size >= minimo
             Text(
                 when {
@@ -100,7 +109,20 @@ fun SecaoFotos(
                     val forma = Modifier.weight(1f).aspectRatio(1f).clip(MaterialTheme.shapes.medium)
                     when (ladrilho) {
                         is Ladrilho.Foto -> Box(forma.clickable { aoAbrir(ladrilho.anexo) }) {
-                            MiniaturaAnexo(ordemId, ladrilho.anexo, Modifier.fillMaxSize())
+                            if (ladrilho.anexo.ehVideo) {
+                                // Vídeo não vira miniatura: um ícone, para o técnico saber que está lá.
+                                Box(
+                                    Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Icon(Icons.Outlined.Videocam, contentDescription = "Vídeo", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text("Vídeo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            } else {
+                                MiniaturaAnexo(ordemId, ladrilho.anexo, Modifier.fillMaxSize())
+                            }
                             if (ladrilho.anexo.pendente) {
                                 Box(
                                     Modifier
@@ -149,22 +171,40 @@ fun SecaoFotos(
                 onClick = aoCamera,
                 enabled = habilitado && !preparando,
                 shape = MaterialTheme.shapes.medium,
-                modifier = Modifier.weight(1f).height(52.dp),
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
             ) {
                 Icon(Icons.Outlined.PhotoCamera, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text("Tirar foto", modifier = Modifier.padding(start = 8.dp))
+            }
+            if (aceitaVideo) {
+                FilledTonalButton(
+                    onClick = aoVideo,
+                    enabled = habilitado && !preparando,
+                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                ) {
+                    Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Text("Gravar vídeo", modifier = Modifier.padding(start = 8.dp))
+                }
             }
             if (!apenasCamera) {
                 OutlinedButton(
                     onClick = aoGaleria,
                     enabled = habilitado && !preparando,
                     shape = MaterialTheme.shapes.medium,
-                    modifier = Modifier.weight(1f).height(52.dp),
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
                 ) {
                     Icon(Icons.Outlined.PhotoLibrary, contentDescription = null, modifier = Modifier.size(20.dp))
                     Text("Galeria", modifier = Modifier.padding(start = 8.dp))
                 }
             }
+        }
+        if (aceitaVideo) {
+            Text(
+                "O vídeo grava até 30 segundos. Mostre o lugar e o caminho até o quadro.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
         if (apenasCamera) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -218,13 +258,29 @@ fun VisorDeFoto(
     Dialog(onDismissRequest = aoFechar, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(color = Color.Black, contentColor = Color.White, modifier = Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize()) {
-                MiniaturaAnexo(
-                    ordemId,
-                    foto,
-                    Modifier.fillMaxSize().background(Color.Black),
-                    lado = 1600,
-                    ajuste = ContentScale.Fit,
-                )
+                if (foto.ehVideo) {
+                    Column(
+                        Modifier.fillMaxSize().padding(32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(64.dp))
+                        Text(
+                            "Vídeo gravado. Para assistir, abra a OS no site do BBSolution.",
+                            style = MaterialTheme.typography.bodyLarge,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.padding(top = 12.dp),
+                        )
+                    }
+                } else {
+                    MiniaturaAnexo(
+                        ordemId,
+                        foto,
+                        Modifier.fillMaxSize().background(Color.Black),
+                        lado = 1600,
+                        ajuste = ContentScale.Fit,
+                    )
+                }
                 Row(
                     Modifier.fillMaxWidth().statusBarsPadding().background(Color.Black.copy(alpha = 0.45f)).padding(4.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -232,7 +288,8 @@ fun VisorDeFoto(
                     IconButton(onClick = aoFechar) { Icon(Icons.Outlined.Close, contentDescription = "Fechar", tint = Color.White) }
                     Column(Modifier.weight(1f)) {
                         Text(
-                            foto.capturadoEm?.let { "Tirada em " + Datas.instanteCurto(it) } ?: "Foto",
+                            foto.capturadoEm?.let { (if (foto.ehVideo) "Gravado em " else "Tirada em ") + Datas.instanteCurto(it) }
+                                ?: (if (foto.ehVideo) "Vídeo" else "Foto"),
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
@@ -253,7 +310,7 @@ fun VisorDeFoto(
     if (confirmar) {
         AlertDialog(
             onDismissRequest = { confirmar = false },
-            title = { Text("Apagar esta foto?") },
+            title = { Text(if (foto.ehVideo) "Apagar este vídeo?" else "Apagar esta foto?") },
             text = {
                 Text(
                     if (foto.pendente) {

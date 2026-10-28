@@ -68,7 +68,9 @@ import platform.UIKit.UIImage
 import platform.UIKit.UIImageJPEGRepresentation
 import platform.UIKit.UIImagePickerController
 import platform.UIKit.UIImagePickerControllerDelegateProtocol
+import platform.UIKit.UIImagePickerControllerMediaURL
 import platform.UIKit.UIImagePickerControllerOriginalImage
+import platform.UIKit.UIImagePickerControllerQualityTypeMedium
 import platform.UIKit.UIImagePickerControllerSourceType
 import platform.UIKit.UILabel
 import platform.UIKit.UINavigationControllerDelegateProtocol
@@ -140,6 +142,13 @@ actual fun rememberCamera(aoTirar: (marca: String, foto: OrigemFoto?) -> Unit): 
 }
 
 @Composable
+actual fun rememberCameraVideo(aoGravar: (marca: String, video: OrigemFoto?) -> Unit): (marca: String) -> Unit {
+    val gravou by rememberUpdatedState(aoGravar)
+    val gravador = remember { GravadorDeVideo() }
+    return remember(gravador) { { marca -> gravador.abrir { video -> gravou(marca, video) } } }
+}
+
+@Composable
 actual fun rememberGaleria(aoEscolher: (marca: String, foto: OrigemFoto?) -> Unit): (marca: String) -> Unit {
     val escolher by rememberUpdatedState(aoEscolher)
     val seletor = remember { SeletorDeFoto() }
@@ -187,6 +196,51 @@ private class SeletorDeFoto {
         val caminho = pastaCapturas() + "/" + NSUUID().UUIDString + ".jpg"
         val dados = UIImageJPEGRepresentation(imagem, 0.92) ?: return null
         return if (dados.writeToFile(caminho, atomically = true)) OrigemFoto(caminho, temporaria = true) else null
+    }
+}
+
+/**
+ * O vídeo do próprio iOS: a câmera do sistema, até 30 s em qualidade média. O
+ * arquivo (`.MOV`) fica numa pasta temporária do sistema; quem recebe o move
+ * para a pasta da OS. Precisa do `NSMicrophoneUsageDescription` no `Info.plist` —
+ * sem ele o iOS derruba o app ao abrir a gravação.
+ *
+ * Sem câmera (o simulador), não há o que gravar: devolve nulo.
+ */
+private class GravadorDeVideo {
+    private var delegado: DelegadoVideo? = null
+
+    fun abrir(aoTerminar: (OrigemFoto?) -> Unit) {
+        val topo = telaDoTopo() ?: return aoTerminar(null)
+        val camera = UIImagePickerControllerSourceType.UIImagePickerControllerSourceTypeCamera
+        if (!UIImagePickerController.isSourceTypeAvailable(camera)) return aoTerminar(null)
+        val novo = DelegadoVideo { endereco ->
+            delegado = null
+            aoTerminar(endereco?.let { OrigemFoto(it, temporaria = true) })
+        }
+        delegado = novo
+        val seletor = UIImagePickerController()
+        seletor.sourceType = camera
+        seletor.mediaTypes = listOf("public.movie")
+        seletor.videoMaximumDuration = 30.0
+        seletor.videoQuality = UIImagePickerControllerQualityTypeMedium
+        seletor.delegate = novo
+        topo.presentViewController(seletor, animated = true, completion = null)
+    }
+}
+
+private class DelegadoVideo(private val aoTerminar: (String?) -> Unit) :
+    NSObject(),
+    UIImagePickerControllerDelegateProtocol,
+    UINavigationControllerDelegateProtocol {
+
+    override fun imagePickerController(picker: UIImagePickerController, didFinishPickingMediaWithInfo: Map<Any?, *>) {
+        val endereco = (didFinishPickingMediaWithInfo[UIImagePickerControllerMediaURL] as? NSURL)?.path
+        picker.dismissViewControllerAnimated(true) { aoTerminar(endereco) }
+    }
+
+    override fun imagePickerControllerDidCancel(picker: UIImagePickerController) {
+        picker.dismissViewControllerAnimated(true) { aoTerminar(null) }
     }
 }
 

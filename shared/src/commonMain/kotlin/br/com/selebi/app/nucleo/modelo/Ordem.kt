@@ -72,6 +72,21 @@ enum class TipoResposta(val api: String) {
 }
 
 /**
+ * Quando a observação do item é obrigatória (`exigeObservacao` do servidor):
+ * `SEM_FOTO` deixa a explicação valer no lugar da foto que não deu para tirar;
+ * `SEMPRE` pede a observação junto com a foto.
+ */
+enum class ExigeObservacao(val api: String) {
+    NAO("nao"),
+    SEM_FOTO("sem_foto"),
+    SEMPRE("sempre");
+
+    companion object {
+        fun daApi(valor: String?): ExigeObservacao = entries.firstOrNull { it.api == valor } ?: NAO
+    }
+}
+
+/**
  * A resposta de um item: marcado (check, sim/não), número, texto (e a opção
  * escolhida), ou lista (várias opções, seriais). Foto não é resposta — é anexo.
  */
@@ -120,6 +135,13 @@ data class ItemChecklist(
     val fotosMinimas: Int = 0,
     /** Só vale foto tirada na hora — três vistorias usaram print do Street View. */
     val apenasCamera: Boolean = false,
+    val exigeObservacao: ExigeObservacao = ExigeObservacao.NAO,
+    /** Pode ficar para uma visita de volta (sombra, espaço útil, caminho do cabo). */
+    val permiteAgendar: Boolean = false,
+    /** A foto pode ser um vídeo curto (onde vai ficar o inversor). */
+    val aceitaVideo: Boolean = false,
+    /** O técnico deixou para a visita de volta. Conta como cumprido. */
+    val agendar: Boolean = false,
     val valor: Resposta? = null,
     val respondidoEm: Instant? = null,
 )
@@ -137,7 +159,9 @@ data class AnexoOs(
     val pendente: Boolean = false,
     /** Quem enviou. Foto já enviada só sai por quem a enviou (ou pela gestão). */
     val enviadoPorId: String? = null,
-)
+) {
+    val ehVideo: Boolean get() = categoria == "video"
+}
 
 /** Uma linha do histórico, já escrita pelo servidor com as palavras do site. */
 data class EventoOs(
@@ -205,7 +229,9 @@ data class Ordem(
     /** Obrigatórios que ainda travam a conclusão. */
     val obrigatoriosPendentes: List<ItemChecklist> get() = checklist.filter { it.obrigatorio && !it.concluido }
 
-    fun fotosDo(itemId: String): List<AnexoOs> = anexos.filter { it.itemId == itemId && it.categoria == "foto" }
+    /** As fotos do item — e os vídeos, que contam como foto onde o item aceita. */
+    fun fotosDo(itemId: String): List<AnexoOs> =
+        anexos.filter { it.itemId == itemId && (it.categoria == "foto" || it.categoria == "video") }
 
     val temAssinatura: Boolean get() = anexos.any { it.categoria == "assinatura" }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
@@ -322,7 +323,7 @@ private fun CampoSerial(
         },
         enabled = habilitado,
         shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().height(56.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
     ) {
         Icon(Icons.Outlined.QrCodeScanner, contentDescription = null, modifier = Modifier.size(22.dp))
         Text("Ler código de barras da etiqueta", modifier = Modifier.padding(start = 10.dp))
@@ -351,7 +352,7 @@ private fun CampoSerial(
             onClick = { adicionar(digitado) },
             enabled = habilitado && normalizado.isNotEmpty() && problema == null,
             shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.padding(top = 8.dp).height(56.dp),
+            modifier = Modifier.padding(top = 8.dp).heightIn(min = 56.dp),
         ) { Text("Adicionar") }
     }
 }

@@ -3,6 +3,8 @@ package br.com.selebi.app.funcionalidade.execucao
 import br.com.selebi.app.amostras.AmostrasExecucao
 import br.com.selebi.app.nucleo.modelo.AcaoOs
 import br.com.selebi.app.nucleo.modelo.Envio
+import br.com.selebi.app.nucleo.modelo.EsperaEnvio
+import br.com.selebi.app.nucleo.modelo.MotivoEspera
 import br.com.selebi.app.nucleo.modelo.StatusOs
 import br.com.selebi.app.nucleo.modelo.TipoEnvio
 import org.junit.Assert.assertEquals
@@ -83,6 +85,36 @@ class RoteiroTest {
         assertEquals("Foto · Disjuntor do padrão — amperagem", Roteiro.descrever(envio(TipoEnvio.FOTO, "v05"), emCampo))
         assertEquals("Conclusão da OS", Roteiro.descrever(envio(TipoEnvio.ACAO, acao = AcaoOs.CONCLUIR), emCampo))
         assertEquals("Assinatura do cliente", Roteiro.descrever(envio(TipoEnvio.ASSINATURA), emCampo))
+    }
+
+    @Test
+    fun `a fila explica por que esta parada, e o que muda no iPhone`() {
+        fun envio(erro: String? = null) = Envio("x", emCampo.id, TipoEnvio.FOTO, "v05", null, Instant.fromEpochSeconds(0), erro)
+        fun resumo(envios: List<Envio>, online: Boolean, espera: EsperaEnvio?, fechado: Boolean) =
+            Roteiro.resumoDaFila(envios, online, espera, fechado)
+
+        assertEquals("Tudo o que você fez nesta OS já está no BBSolution.", resumo(emptyList(), true, null, true))
+        assertTrue(resumo(listOf(envio("recusado")), true, null, true).startsWith("O servidor recusou"))
+
+        // Sem sinal: no Android sobe com o app fechado; no iPhone só com ele aberto.
+        assertTrue(resumo(listOf(envio()), false, null, true).endsWith("mesmo com o app fechado."))
+        assertTrue(resumo(listOf(envio()), false, null, false).endsWith("Abra o BBSolution quando tiver sinal."))
+        assertFalse(resumo(listOf(envio()), false, null, false).contains("app fechado"))
+
+        // Internet ligada e fila parada: o servidor, com o número do erro.
+        val servidor = EsperaEnvio(MotivoEspera.SERVIDOR, 500)
+        assertEquals(
+            "O servidor está com problema (erro 500). Está tudo guardado aqui e o app tenta de novo sozinho.",
+            resumo(listOf(envio()), true, servidor, true),
+        )
+        assertTrue(resumo(listOf(envio()), true, servidor, false).endsWith("Deixe o BBSolution aberto."))
+        assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SERVIDOR), true).startsWith("O servidor está com problema."))
+
+        assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SEM_SINAL), true).startsWith("O sinal está fraco"))
+
+        // Subindo agora, sem espera.
+        assertTrue(resumo(listOf(envio()), true, null, true).startsWith("Subindo."))
+        assertTrue(resumo(listOf(envio()), true, null, false).endsWith("aberto até terminar."))
     }
 
     @Test

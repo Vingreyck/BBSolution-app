@@ -2,6 +2,7 @@ package br.com.selebi.app.navegacao
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,6 +30,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -206,15 +210,32 @@ private fun NavegacaoPrincipal(usuario: Usuario) {
 
 @Composable
 fun BarraDeBaixo(destinos: List<Destino>, marcado: (Destino) -> Boolean, aoIr: (Destino) -> Unit) {
-    NavigationBar {
-        destinos.forEach { destino ->
-            val ativo = marcado(destino)
-            NavigationBarItem(
-                selected = ativo,
-                onClick = { aoIr(destino) },
-                icon = { Icon(if (ativo) destino.iconeMarcado else destino.icone, contentDescription = null) },
-                label = { Text(destino.rotulo) },
-            )
+    BoxWithConstraints {
+        // Com cinco abas num celular de 320 dp cada uma tem 64 dp, e "Em campo" não cabe em 12 sp.
+        val estreita = maxWidth / destinos.size.coerceAtLeast(1) < 72.dp
+        NavigationBar {
+            destinos.forEach { destino ->
+                val ativo = marcado(destino)
+                NavigationBarItem(
+                    selected = ativo,
+                    onClick = { aoIr(destino) },
+                    icon = { Icon(if (ativo) destino.iconeMarcado else destino.icone, contentDescription = null) },
+                    // Uma linha só: "Em campo" quebrava em duas num celular estreito e desalinhava o ícone.
+                    // E com a letra do sistema grande o rótulo fica no tamanho normal: o ícone, e a tela ao
+                    // abrir, já dizem onde é.
+                    label = {
+                        val d = LocalDensity.current
+                        CompositionLocalProvider(LocalDensity provides Density(d.density, minOf(d.fontScale, 1f))) {
+                            Text(
+                                destino.rotulo,
+                                style = if (estreita) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelMedium,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        }
+                    },
+                )
+            }
         }
     }
 }

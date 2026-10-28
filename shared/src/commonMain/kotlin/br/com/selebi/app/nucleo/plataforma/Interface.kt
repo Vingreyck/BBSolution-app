@@ -47,6 +47,15 @@ data class OrigemFoto(val endereco: String, val temporaria: Boolean)
 @Composable
 expect fun rememberCamera(aoTirar: (marca: String, foto: OrigemFoto?) -> Unit): (marca: String) -> Unit
 
+/**
+ * Grava um vídeo curto — até 30 s, em qualidade média, uns 10 a 25 MB. Como a
+ * câmera, devolve a `marca` (o item) junto; nulo quando a pessoa desiste. O
+ * arquivo (`.mp4` no Android, `.mov` no iPhone) é temporário: quem recebe o move
+ * para a pasta da OS.
+ */
+@Composable
+expect fun rememberCameraVideo(aoGravar: (marca: String, video: OrigemFoto?) -> Unit): (marca: String) -> Unit
+
 /** Escolhe uma foto já tirada. Como a câmera, devolve a `marca` junto. */
 @Composable
 expect fun rememberGaleria(aoEscolher: (marca: String, foto: OrigemFoto?) -> Unit): (marca: String) -> Unit

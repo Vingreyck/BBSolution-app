@@ -100,6 +100,11 @@ data class ItemChecklistDto(
     val unidade: String? = null,
     val fotosMinimas: Int = 0,
     val apenasCamera: Boolean = false,
+    /** `nao`, `sem_foto` ou `sempre`. */
+    val exigeObservacao: String = "nao",
+    val permiteAgendar: Boolean = false,
+    val aceitaVideo: Boolean = false,
+    val agendar: Boolean = false,
     /** true/false, número, texto ou lista — depende do tipo do item. */
     val valor: JsonElement? = null,
     val respondidoEm: String? = null,
@@ -224,7 +229,20 @@ data class AcaoPedido(
     val resultado: String? = null,
     val laudo: String? = null,
     val assinaturaNome: String? = null,
+    /** Só no "concluir": quem volta para o que ficou para depois, e em que dia. */
+    val agendamento: AgendamentoPedido? = null,
 )
+
+/** A visita de volta marcada no fim da vistoria: o técnico escolhido e o dia (`AAAA-MM-DD`, opcional). */
+@Serializable
+data class AgendamentoPedido(val responsavelId: String, val dia: String? = null)
+
+/** Quem pode ser escolhido para voltar: os técnicos ativos da empresa. */
+@Serializable
+data class TecnicoDto(val id: String, val nome: String)
+
+@Serializable
+data class TecnicosResposta(val tecnicos: List<TecnicoDto> = emptyList())
 
 @Serializable
 data class AcaoResposta(
@@ -239,6 +257,8 @@ data class RespostaPedido(
     val valor: JsonElement? = null,
     val observacao: String? = null,
     val respondidoEm: String? = null,
+    /** Deixar o item para a visita de volta. Ausente mantém como está. */
+    val agendar: Boolean? = null,
 )
 
 @Serializable

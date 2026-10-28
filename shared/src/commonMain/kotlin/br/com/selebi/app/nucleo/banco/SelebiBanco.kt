@@ -15,7 +15,9 @@ import androidx.room.RoomDatabaseConstructor
  * fez sem sinal — foto de vistoria, resposta, conclusão — e apagar o banco numa
  * atualização do app perderia trabalho de campo que não existe em nenhum outro
  * lugar. Toda mudança daqui para a frente precisa de uma `Migration` escrita a
- * partir dos esquemas em `shared/schemas`.
+ * partir dos esquemas em `shared/schemas` — ver `MigracoesBanco.kt`.
+ *
+ * Versão 3: observação obrigatória, vídeo e "agendar" nos itens do checklist.
  */
 @Database(
     entities = [
@@ -27,7 +29,7 @@ import androidx.room.RoomDatabaseConstructor
         AvisoEntidade::class,
         PosicaoEntidade::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 @ConstructedBy(SelebiBancoConstrutor::class)

@@ -82,5 +82,8 @@ targets:
         NSCameraUsageDescription: >-
           A câmera tira as fotos da vistoria e lê o código de barras da etiqueta
           do inversor.
+        NSMicrophoneUsageDescription: >-
+          O microfone grava o som do vídeo curto do local onde o inversor vai
+          ficar, na vistoria.
         NSPhotoLibraryUsageDescription: >-
           Para anexar à ordem de serviço uma foto que já está no celular.
