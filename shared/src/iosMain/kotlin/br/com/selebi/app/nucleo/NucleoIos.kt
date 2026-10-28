@@ -10,11 +10,15 @@ import br.com.selebi.app.nucleo.dados.CofreSessaoIos
 import br.com.selebi.app.nucleo.dados.ConectividadeIos
 import br.com.selebi.app.nucleo.dados.LocalizacaoIos
 import br.com.selebi.app.nucleo.dados.PreferenciasApp
+import br.com.selebi.app.nucleo.diagnostico.RegistroDeFalhas
 import br.com.selebi.app.nucleo.plataforma.Ambiente
 import br.com.selebi.app.nucleo.plataforma.pastaCapturas
 import br.com.selebi.app.nucleo.rastreio.MemoriaRastreioIos
 import br.com.selebi.app.nucleo.rastreio.MotorRastreioIos
 import br.com.selebi.app.nucleo.rede.ModuloRede
+import kotlin.experimental.ExperimentalNativeApi
+import kotlin.native.setUnhandledExceptionHook
+import kotlin.native.terminateWithUnhandledException
 import okio.Path.Companion.toPath
 import platform.Foundation.NSApplicationSupportDirectory
 import platform.Foundation.NSBundle
@@ -34,6 +38,7 @@ import platform.UIKit.UIApplicationDidEnterBackgroundNotification
  * Os dados ficam em "Application Support" — a pasta que o iOS guarda no
  * backup e não apaga sozinho; as cópias baixadas, em "Caches".
  */
+@OptIn(ExperimentalNativeApi::class)
 fun montarNucleoIos(): Nucleo {
     Ambiente.versao = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleShortVersionString") as? String ?: Ambiente.versao
     Ambiente.build = NSBundle.mainBundle.objectForInfoDictionaryKey("CFBundleVersion") as? String ?: ""
@@ -59,7 +64,15 @@ fun montarNucleoIos(): Nucleo {
         memoriaRastreio = memoria,
         motorRastreio = motor,
         agendador = { n -> AgendadorIos(n).also { agendador = it } },
+        pastaDeFalhas = dados,
     )
+    // Exceção do Kotlin que ninguém tratou: grava a falha e termina como o sistema
+    // terminaria. (Queda do próprio sistema, sem exceção do Kotlin, não passa aqui.)
+    val registro = RegistroDeFalhas(dados, nucleo.json)
+    setUnhandledExceptionHook { erro ->
+        registro.gravar(erro)
+        terminateWithUnhandledException(erro)
+    }
     motor.conectar(nucleo)
     agendador?.iniciar()
 

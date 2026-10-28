@@ -180,6 +180,8 @@ class SelebiApiKtor(
 
     override suspend fun trilha(id: String): TrilhaDto = buscar("ordens/$id/trilha")
 
+    override suspend fun enviarFalha(pedido: FalhaPedido): FalhaResposta = postar("erros", pedido)
+
     override suspend fun tecnicos(): TecnicosResposta = buscar("tecnicos")
 
     override suspend fun equipe(): EquipeResposta = buscar("equipe")

@@ -32,5 +32,6 @@ fun montarNucleoAndroid(contexto: Context, agendador: (Nucleo) -> AgendadorEnvio
         memoriaRastreio = MemoriaRastreioAndroid(app),
         motorRastreio = motor,
         agendador = agendador,
+        pastaDeFalhas = app.filesDir.path,
     )
 }

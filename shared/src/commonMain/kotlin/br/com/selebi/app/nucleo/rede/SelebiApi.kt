@@ -71,6 +71,9 @@ interface SelebiApi {
 
     suspend fun trilha(id: String): TrilhaDto
 
+    /** Conta ao servidor que o app travou (sem login: o travamento pode ter sido na entrada). */
+    suspend fun enviarFalha(pedido: FalhaPedido): FalhaResposta
+
     /** Os técnicos que podem ser escolhidos para uma visita de volta. */
     suspend fun tecnicos(): TecnicosResposta
 

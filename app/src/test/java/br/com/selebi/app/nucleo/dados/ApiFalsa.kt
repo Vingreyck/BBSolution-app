@@ -11,6 +11,8 @@ import br.com.selebi.app.nucleo.rede.CadastroResposta
 import br.com.selebi.app.nucleo.rede.CodigoEmpresaPedido
 import br.com.selebi.app.nucleo.rede.EmpresaDto
 import br.com.selebi.app.nucleo.rede.EquipeResposta
+import br.com.selebi.app.nucleo.rede.FalhaPedido
+import br.com.selebi.app.nucleo.rede.FalhaResposta
 import br.com.selebi.app.nucleo.rede.EuResposta
 import br.com.selebi.app.nucleo.rede.LoginPedido
 import br.com.selebi.app.nucleo.rede.LoginResposta
@@ -96,6 +98,8 @@ internal class ApiFalsa : SelebiApi {
     override suspend fun removerAnexo(id: String, anexoId: String): OrdemTalvezResposta = error("")
     override suspend fun baixarAnexo(id: String, anexoId: String): ByteArray = error("")
     override suspend fun tecnicos(): TecnicosResposta = TecnicosResposta()
+    val falhasEnviadas = mutableListOf<FalhaPedido>()
+    override suspend fun enviarFalha(pedido: FalhaPedido): FalhaResposta = FalhaResposta().also { falhasEnviadas += pedido }
     override suspend fun equipe(): EquipeResposta = error("")
     override suspend fun aprovar(id: String, pedido: AprovarPedido): Unit = error("")
     override suspend fun recusar(id: String): Unit = error("")

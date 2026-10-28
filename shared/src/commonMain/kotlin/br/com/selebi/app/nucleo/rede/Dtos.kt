@@ -292,3 +292,19 @@ data class ErroDto(
     val mensagem: String,
     val campos: Map<String, String>? = null,
 )
+
+/** O travamento do app, guardado no celular e enviado na abertura seguinte. */
+@Serializable
+data class FalhaPedido(
+    val plataforma: String,
+    val versao: String,
+    val build: String,
+    val dispositivo: String,
+    val tipo: String,
+    val mensagem: String,
+    val pilha: String,
+    val quando: String,
+)
+
+@Serializable
+data class FalhaResposta(val ok: Boolean = true)

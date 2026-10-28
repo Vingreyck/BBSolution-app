@@ -18,6 +18,7 @@ import br.com.selebi.app.nucleo.dados.ExecucaoRepository
 import br.com.selebi.app.nucleo.dados.FilaEnvio
 import br.com.selebi.app.nucleo.dados.Localizacao
 import br.com.selebi.app.nucleo.dados.OrdensRepository
+import br.com.selebi.app.nucleo.diagnostico.RegistroDeFalhas
 import br.com.selebi.app.nucleo.dados.PreferenciasApp
 import br.com.selebi.app.nucleo.dados.SessaoRepository
 import br.com.selebi.app.nucleo.plataforma.Ambiente
@@ -34,6 +35,7 @@ import br.com.selebi.app.nucleo.rede.SelebiApiKtor
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /**
  * O app montado: uma peça de cada, criada uma vez só, na ordem em que uma
@@ -61,6 +63,8 @@ class Nucleo(
     val motorRastreio: MotorRastreio,
     agendador: (Nucleo) -> AgendadorEnvio,
     api: SelebiApi? = null,
+    /** Pasta onde o app guarda o travamento para contar na abertura seguinte. Nulo: não conta. */
+    pastaDeFalhas: String? = null,
 ) {
     /** Vive enquanto o app vive — para o que não pode morrer com uma tela. */
     val escopo = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -89,6 +93,14 @@ class Nucleo(
     val equipe = EquipeRepository(this.api, executor)
     val campo = CampoRepository(this.api, executor, json)
     val miniaturas = Miniaturas(this.api, arquivos)
+
+    init {
+        // O travamento da última vez, se houve, vai agora — com ou sem login.
+        pastaDeFalhas?.let { pasta ->
+            val falhas = RegistroDeFalhas(pasta, json)
+            escopo.launch { falhas.enviarPendente(this@Nucleo.api, executor) }
+        }
+    }
 }
 
 /** O núcleo à disposição das telas. Quem monta a raiz do app fornece. */
