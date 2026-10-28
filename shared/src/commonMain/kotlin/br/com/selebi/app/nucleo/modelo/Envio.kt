@@ -26,6 +26,9 @@ data class AvisoOs(val id: Long, val ordemId: String, val texto: String)
 
 /** Por que a fila está esperando em vez de subindo. */
 enum class MotivoEspera {
+    /** O servidor exige uma versão mais nova do app (426). O que foi feito fica guardado. */
+    APP_DESATUALIZADO,
+
     /** Sem internet, ou sinal tão fraco que o envio não completou. */
     SEM_SINAL,
 

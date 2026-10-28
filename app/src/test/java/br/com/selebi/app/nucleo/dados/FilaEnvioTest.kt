@@ -378,6 +378,23 @@ class FilaEnvioTest {
     }
 
     @Test
+    fun `app desatualizado nao recusa nem apaga nada e a fila espera a atualizacao`() = runBlocking {
+        copia.gravarTodas(listOf(dto()))
+        fila.enfileirar(resposta("i2", Resposta.Marcado(true)))
+        api.aoResponder = { _, _ -> throw recusa(426, "app_desatualizado", "Atualize o app.") }
+
+        assertEquals(ResultadoEnvio.TENTAR_DE_NOVO, fila.enviar("u1"))
+        assertEquals(EsperaEnvio(MotivoEspera.APP_DESATUALIZADO, 426), fila.espera.value)
+        val pendente = banco.pendentes().todos().single()
+        assertNull("426 não vira recusa: o trabalho de campo continua guardado", pendente.erro)
+
+        // Depois de atualizar, o mesmo envio sobe.
+        api.aoResponder = { _, _ -> RespostaItemResposta(dto(versao = "2026-09-25T12:09:00.000Z", parede = JsonPrimitive(true))) }
+        assertEquals(ResultadoEnvio.TUDO_ENVIADO, fila.enviar("u1"))
+        assertTrue(banco.pendentes().todos().isEmpty())
+    }
+
+    @Test
     fun `sessao vencida para a fila sem perder nada`() = runBlocking {
         copia.gravarTodas(listOf(dto()))
         fila.enfileirar(resposta("i2", Resposta.Marcado(true)))

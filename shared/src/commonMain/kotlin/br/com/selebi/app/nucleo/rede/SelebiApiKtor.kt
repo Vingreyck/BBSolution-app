@@ -57,6 +57,9 @@ class SelebiApiKtor(
     private val autenticacao = createClientPlugin("Autenticacao") {
         onRequest { pedido, _ ->
             pedido.headers[HttpHeaders.UserAgent] = agente
+            // Diz ao servidor qual versão está falando: é o que permite ele pedir "atualize".
+            pedido.headers["X-App-Build"] = Ambiente.build
+            pedido.headers["X-App-Plataforma"] = nomeDoSistema.lowercase()
             portador.token?.let { pedido.headers[HttpHeaders.Authorization] = "Bearer $it" }
         }
         onResponse { resposta ->

@@ -12,3 +12,9 @@
 
 # As rotas de navegação também são @Serializable (navegação tipada).
 -keep @kotlinx.serialization.Serializable class br.com.selebi.app.navegacao.** { *; }
+
+# Número de linha e nome do arquivo na pilha do travamento. Sem isto a pilha diz
+# só "a.b.c" sem linha, e o mapeamento (`mapping.txt`) não tem como dizer onde
+# foi. Custa uns poucos KB no app e é o que faz o travamento ser legível.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile

@@ -126,6 +126,8 @@ object Roteiro {
             } else {
                 "Sem sinal agora. $guardado e sobe quando a conexão voltar. Abra o BBSolution quando tiver sinal."
             }
+            espera?.motivo == MotivoEspera.APP_DESATUALIZADO ->
+                "Esta versão do BBSolution está desatualizada. Atualize o aplicativo na loja: $guardado e sobe depois da atualização."
             espera?.motivo == MotivoEspera.SERVIDOR ->
                 "O servidor está com problema" + (espera.codigo?.let { " (erro $it)" } ?: "") +
                     ". $guardado e o app tenta de novo sozinho.$sozinho"

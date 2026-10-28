@@ -111,6 +111,7 @@ class RoteiroTest {
         assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SERVIDOR), true).startsWith("O servidor está com problema."))
 
         assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SEM_SINAL), true).startsWith("O sinal está fraco"))
+        assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.APP_DESATUALIZADO, 426), true).startsWith("Esta versão do BBSolution está desatualizada"))
 
         // Subindo agora, sem espera.
         assertTrue(resumo(listOf(envio()), true, null, true).startsWith("Subindo."))

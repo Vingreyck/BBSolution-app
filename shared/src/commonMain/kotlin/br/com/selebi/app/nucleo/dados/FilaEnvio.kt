@@ -217,6 +217,9 @@ class FilaEnvio(
             ErroApp.SemConexao, ErroApp.TempoEsgotado -> Desfecho.Depois(EsperaEnvio(MotivoEspera.SEM_SINAL))
             is ErroApp.Servidor -> when {
                 e.status == 401 -> Desfecho.SemSessao
+                // App velho demais: NADA é recusado nem apagado. Fica esperando a pessoa
+                // atualizar, e sobe com a versão nova.
+                e.status == 426 -> Desfecho.Depois(EsperaEnvio(MotivoEspera.APP_DESATUALIZADO, 426))
                 // Servidor fora do ar, apressado ou sem o Drive: é esperar.
                 e.status == 408 || e.status == 425 || e.status == 429 || e.status >= 500 ->
                     Desfecho.Depois(EsperaEnvio(MotivoEspera.SERVIDOR, e.status))
