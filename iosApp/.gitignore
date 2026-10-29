@@ -4,3 +4,4 @@ iosApp/Info.plist
 build/
 DerivedData/
 xcuserdata/
+iosApp/BBSolution.entitlements

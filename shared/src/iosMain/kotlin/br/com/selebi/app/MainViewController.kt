@@ -7,8 +7,8 @@ import br.com.selebi.app.nucleo.Nucleo
 import br.com.selebi.app.nucleo.montarNucleoIos
 import platform.UIKit.UIViewController
 
-/** Um só por app, como o `SelebiApp` do Android. */
-private val nucleo: Nucleo by lazy { montarNucleoIos() }
+/** Um só por app, como o `SelebiApp` do Android. A tela e os avisos (`AvisosIos`) usam o mesmo. */
+internal val nucleoDoApp: Nucleo by lazy { montarNucleoIos() }
 
 /**
  * A tela do app no iPhone — o mesmo `AppSelebi` do Android, dentro de uma
@@ -23,5 +23,5 @@ fun MainViewController(): UIViewController = ComposeUIViewController(
         enableBackGesture = true
     },
 ) {
-    AppSelebi(nucleo)
+    AppSelebi(nucleoDoApp)
 }

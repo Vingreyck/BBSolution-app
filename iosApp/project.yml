@@ -51,6 +51,13 @@ targets:
           - "-framework"
           - "Shared"
           - "-lsqlite3"
+    # Avisos (push) de OS: o perfil de assinatura precisa ter "Push Notifications"
+    # ligado no identificador br.com.selebi.app. "production" vale para o
+    # TestFlight e a App Store.
+    entitlements:
+      path: iosApp/BBSolution.entitlements
+      properties:
+        aps-environment: production
     info:
       path: iosApp/Info.plist
       properties:
