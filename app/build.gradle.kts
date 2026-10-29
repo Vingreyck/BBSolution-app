@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    // Lê o google-services.json (o projeto do Firebase) e o transforma em recursos do app.
+    alias(libs.plugins.google.services)
 }
 
 /**
@@ -36,7 +38,7 @@ android {
         // Android 8.0+. Abaixo disso sobra menos de 1% dos celulares em uso no Brasil.
         minSdk = 26
         targetSdk = 36
-        versionCode = 6
+        versionCode = 7
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -111,6 +113,9 @@ dependencies {
     // Fila de envio da OS: sobe o que o técnico fez sem sinal quando a rede
     // volta, mesmo com o app fechado.
     implementation(libs.androidx.work.runtime)
+    // Avisos (push) de OS atribuída, reagendada ou cancelada.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
 
     implementation(platform(libs.androidx.compose.bom))
     debugImplementation(libs.androidx.compose.ui.tooling)

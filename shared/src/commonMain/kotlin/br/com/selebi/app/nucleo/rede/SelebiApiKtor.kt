@@ -185,6 +185,9 @@ class SelebiApiKtor(
 
     override suspend fun enviarFalha(pedido: FalhaPedido): FalhaResposta = postar("erros", pedido)
 
+    override suspend fun registrarAparelho(pedido: AparelhoPedido) =
+        exigir(cliente.put(base + "aparelho") { corpo(pedido) })
+
     override suspend fun tecnicos(): TecnicosResposta = buscar("tecnicos")
 
     override suspend fun equipe(): EquipeResposta = buscar("equipe")

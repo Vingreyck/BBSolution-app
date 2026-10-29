@@ -293,6 +293,10 @@ data class ErroDto(
     val campos: Map<String, String>? = null,
 )
 
+/** O endereço de aviso (token do FCM) deste celular. */
+@Serializable
+data class AparelhoPedido(val token: String, val plataforma: String)
+
 /** O travamento do app, guardado no celular e enviado na abertura seguinte. */
 @Serializable
 data class FalhaPedido(

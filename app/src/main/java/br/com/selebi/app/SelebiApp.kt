@@ -9,6 +9,7 @@ import br.com.selebi.app.nucleo.montarNucleoAndroid
 import br.com.selebi.app.nucleo.rede.ModuloRede
 import br.com.selebi.app.nucleo.plataforma.Ambiente
 import br.com.selebi.app.nucleo.rastreio.MotorRastreioAndroid
+import br.com.selebi.app.push.criarCanalDeOrdens
 
 /**
  * O app no Android: monta o [Nucleo] — o mesmo do iPhone — com as peças
@@ -33,6 +34,7 @@ class SelebiApp : Application(), Configuration.Provider {
         super.onCreate()
         Ambiente.versao = BuildConfig.VERSION_NAME
         Ambiente.build = BuildConfig.VERSION_CODE.toString()
+        criarCanalDeOrdens(this)
         // Travou? Grava a falha e deixa o Android fazer o que faria — a próxima
         // abertura conta ao servidor (ver `RegistroDeFalhas`).
         val registro = RegistroDeFalhas(filesDir.path, ModuloRede.json())

@@ -26,6 +26,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -141,6 +142,15 @@ enum class Destino(
 @Composable
 private fun NavegacaoPrincipal(usuario: Usuario) {
     val nav = rememberNavController()
+    // Tocou no aviso de uma OS: abre ela, venha o aviso com o app fechado ou aberto.
+    val push = LocalNucleo.current.push
+    val osDoAviso by push.osParaAbrir.collectAsStateWithLifecycle()
+    LaunchedEffect(osDoAviso) {
+        osDoAviso?.let { id ->
+            nav.navigate(RotaOrdem(id)) { launchSingleTop = true }
+            push.osAberta()
+        }
+    }
     val destinos = remember(usuario.permissoes) {
         Destino.entries.filter { it.permissao == null || usuario.pode(it.permissao) }
     }

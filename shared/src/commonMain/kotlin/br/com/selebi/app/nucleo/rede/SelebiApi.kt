@@ -74,6 +74,9 @@ interface SelebiApi {
     /** Conta ao servidor que o app travou (sem login: o travamento pode ter sido na entrada). */
     suspend fun enviarFalha(pedido: FalhaPedido): FalhaResposta
 
+    /** Conta ao servidor o endereço de aviso (push) deste celular. */
+    suspend fun registrarAparelho(pedido: AparelhoPedido)
+
     /** Os técnicos que podem ser escolhidos para uma visita de volta. */
     suspend fun tecnicos(): TecnicosResposta
 

@@ -22,6 +22,7 @@ import br.com.selebi.app.nucleo.diagnostico.RegistroDeFalhas
 import br.com.selebi.app.nucleo.dados.PreferenciasApp
 import br.com.selebi.app.nucleo.dados.SessaoRepository
 import br.com.selebi.app.nucleo.plataforma.Ambiente
+import br.com.selebi.app.nucleo.push.AvisosPush
 import br.com.selebi.app.nucleo.rastreio.EnvioPosicoes
 import br.com.selebi.app.nucleo.rastreio.MemoriaRastreio
 import br.com.selebi.app.nucleo.rastreio.MotorRastreio
@@ -90,6 +91,7 @@ class Nucleo(
     val execucao = ExecucaoRepository(
         fila, copia, sessao, arquivos, localizacao, banco.avisos(), this.api, executor, json, rastreador,
     )
+    val push = AvisosPush(this.api, executor, ordens, sessao.estado, escopo)
     val equipe = EquipeRepository(this.api, executor)
     val campo = CampoRepository(this.api, executor, json)
     val miniaturas = Miniaturas(this.api, arquivos)
