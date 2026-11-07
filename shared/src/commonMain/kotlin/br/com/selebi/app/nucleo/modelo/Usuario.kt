@@ -11,7 +11,7 @@ enum class Papel(val api: String, val rotulo: String, val descricao: String) {
     VENDEDOR("vendedor", "Vendedor", "Faz vistorias e vê as ordens de serviço atribuídas a ele."),
     ENGENHEIRO("engenheiro", "Engenheiro", "Vê todas as ordens de serviço da empresa."),
     ADM("adm", "Administrador", "Vê tudo e cuida da equipe: aprova cadastros e troca papéis."),
-    OUTRO("", "Outro", "Usa o BBSolution pelo navegador.");
+    OUTRO("", "Outro", "Usa o BB-Selebi pelo navegador.");
 
     companion object {
         fun daApi(valor: String): Papel = entries.firstOrNull { it.api == valor } ?: OUTRO

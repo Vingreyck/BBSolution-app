@@ -21,3 +21,7 @@ keystore.properties
 # Configuração do Firebase (quando o push entrar): fica fora por ser da conta da empresa.
 google-services.json
 GoogleService-Info.plist
+
+# Vídeos para as lojas: grandes demais para o Git (o da Play tem 87 MB); vão para o YouTube.
+loja/*.webm
+loja/*.mp4

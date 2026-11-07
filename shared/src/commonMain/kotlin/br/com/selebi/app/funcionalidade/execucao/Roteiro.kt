@@ -117,23 +117,23 @@ object Roteiro {
     fun resumoDaFila(envios: List<Envio>, online: Boolean, espera: EsperaEnvio?, sobeComAppFechado: Boolean): String {
         val esperando = envios.count { !it.recusado }
         val guardado = "Está tudo guardado aqui"
-        val sozinho = if (sobeComAppFechado) "" else " Deixe o BBSolution aberto."
+        val sozinho = if (sobeComAppFechado) "" else " Deixe o BB-Selebi aberto."
         return when {
-            envios.isEmpty() -> "Tudo o que você fez nesta OS já está no BBSolution."
+            envios.isEmpty() -> "Tudo o que você fez nesta OS já está no BB-Selebi."
             esperando == 0 -> "O servidor recusou o que está abaixo. Veja o motivo e descarte."
             !online -> if (sobeComAppFechado) {
                 "Sem sinal agora. $guardado e sobe sozinho quando a conexão voltar — mesmo com o app fechado."
             } else {
-                "Sem sinal agora. $guardado e sobe quando a conexão voltar. Abra o BBSolution quando tiver sinal."
+                "Sem sinal agora. $guardado e sobe quando a conexão voltar. Abra o BB-Selebi quando tiver sinal."
             }
             espera?.motivo == MotivoEspera.APP_DESATUALIZADO ->
-                "Esta versão do BBSolution está desatualizada. Atualize o aplicativo na loja: $guardado e sobe depois da atualização."
+                "Esta versão do BB-Selebi está desatualizada. Atualize o aplicativo na loja: $guardado e sobe depois da atualização."
             espera?.motivo == MotivoEspera.SERVIDOR ->
                 "O servidor está com problema" + (espera.codigo?.let { " (erro $it)" } ?: "") +
                     ". $guardado e o app tenta de novo sozinho.$sozinho"
             espera?.motivo == MotivoEspera.SEM_SINAL ->
                 "O sinal está fraco e o envio não completou. $guardado e o app tenta de novo sozinho.$sozinho"
-            else -> if (sobeComAppFechado) "Subindo. Não precisa esperar com o app aberto." else "Subindo. Deixe o BBSolution aberto até terminar."
+            else -> if (sobeComAppFechado) "Subindo. Não precisa esperar com o app aberto." else "Subindo. Deixe o BB-Selebi aberto até terminar."
         }
     }
 

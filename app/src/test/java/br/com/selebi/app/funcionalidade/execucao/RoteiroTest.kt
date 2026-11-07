@@ -93,12 +93,12 @@ class RoteiroTest {
         fun resumo(envios: List<Envio>, online: Boolean, espera: EsperaEnvio?, fechado: Boolean) =
             Roteiro.resumoDaFila(envios, online, espera, fechado)
 
-        assertEquals("Tudo o que você fez nesta OS já está no BBSolution.", resumo(emptyList(), true, null, true))
+        assertEquals("Tudo o que você fez nesta OS já está no BB-Selebi.", resumo(emptyList(), true, null, true))
         assertTrue(resumo(listOf(envio("recusado")), true, null, true).startsWith("O servidor recusou"))
 
         // Sem sinal: no Android sobe com o app fechado; no iPhone só com ele aberto.
         assertTrue(resumo(listOf(envio()), false, null, true).endsWith("mesmo com o app fechado."))
-        assertTrue(resumo(listOf(envio()), false, null, false).endsWith("Abra o BBSolution quando tiver sinal."))
+        assertTrue(resumo(listOf(envio()), false, null, false).endsWith("Abra o BB-Selebi quando tiver sinal."))
         assertFalse(resumo(listOf(envio()), false, null, false).contains("app fechado"))
 
         // Internet ligada e fila parada: o servidor, com o número do erro.
@@ -107,11 +107,11 @@ class RoteiroTest {
             "O servidor está com problema (erro 500). Está tudo guardado aqui e o app tenta de novo sozinho.",
             resumo(listOf(envio()), true, servidor, true),
         )
-        assertTrue(resumo(listOf(envio()), true, servidor, false).endsWith("Deixe o BBSolution aberto."))
+        assertTrue(resumo(listOf(envio()), true, servidor, false).endsWith("Deixe o BB-Selebi aberto."))
         assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SERVIDOR), true).startsWith("O servidor está com problema."))
 
         assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.SEM_SINAL), true).startsWith("O sinal está fraco"))
-        assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.APP_DESATUALIZADO, 426), true).startsWith("Esta versão do BBSolution está desatualizada"))
+        assertTrue(resumo(listOf(envio()), true, EsperaEnvio(MotivoEspera.APP_DESATUALIZADO, 426), true).startsWith("Esta versão do BB-Selebi está desatualizada"))
 
         // Subindo agora, sem espera.
         assertTrue(resumo(listOf(envio()), true, null, true).startsWith("Subindo."))

@@ -66,7 +66,7 @@ fun MarcaSelebi(modifier: Modifier = Modifier, tamanho: Dp = 44.dp) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         SeloSelebi(tamanho)
         Text(
-            "BBSolution",
+            "BB-Selebi",
             style = MaterialTheme.typography.headlineMedium.copy(
                 fontWeight = FontWeight.Bold,
                 letterSpacing = (-0.5).sp,

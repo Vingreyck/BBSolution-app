@@ -196,7 +196,7 @@ fun CadastroConteudo(
             rotulo = "E-mail (opcional)",
             icone = Icons.Outlined.Email,
             erro = estado.erros["email"],
-            dica = "Só se você também for usar o BBSolution pelo computador.",
+            dica = "Só se você também for usar o BB-Selebi pelo computador.",
             teclado = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
                 autoCorrectEnabled = false,
@@ -221,7 +221,7 @@ fun CadastroConteudo(
         BotaoPrincipal("Enviar cadastro", aoEnviar, carregando = estado.carregando)
         Spacer(Modifier.height(16.dp))
         Text(
-            "O seu CPF vira o seu login. Ele só é usado para você entrar no BBSolution da sua empresa.",
+            "O seu CPF vira o seu login. Ele só é usado para você entrar no BB-Selebi da sua empresa.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

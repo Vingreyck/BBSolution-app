@@ -38,7 +38,7 @@ android {
         // Android 8.0+. Abaixo disso sobra menos de 1% dos celulares em uso no Brasil.
         minSdk = 26
         targetSdk = 36
-        versionCode = 7
+        versionCode = 8
         versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

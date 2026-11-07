@@ -250,7 +250,7 @@ class ServicoRastreamento : Service() {
     private fun criarCanal() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val canal = NotificationChannel(CANAL, "Em campo", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "Aparece enquanto o BBSolution mostra a sua posição ao escritório, entre o \"Estou a caminho\" e o fim da OS."
+            description = "Aparece enquanto o BB-Selebi mostra a sua posição ao escritório, entre o \"Estou a caminho\" e o fim da OS."
             setShowBadge(false)
         }
         getSystemService(NotificationManager::class.java)?.createNotificationChannel(canal)

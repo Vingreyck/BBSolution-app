@@ -109,7 +109,7 @@ fun EmpresaConteudo(
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text("Qual é a sua empresa?", style = MaterialTheme.typography.headlineSmall)
             Text(
-                "Digite o código que a sua empresa recebeu para usar o BBSolution. É só na primeira vez.",
+                "Digite o código que a sua empresa recebeu para usar o BB-Selebi. É só na primeira vez.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

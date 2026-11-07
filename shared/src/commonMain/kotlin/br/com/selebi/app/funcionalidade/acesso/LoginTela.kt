@@ -176,7 +176,7 @@ fun LoginConteudo(
         BotaoPrincipal("Entrar", aoEntrar, carregando = estado.carregando, habilitado = estado.podeEntrar)
         Spacer(Modifier.height(28.dp))
         Text(
-            "Primeira vez no BBSolution?",
+            "Primeira vez no BB-Selebi?",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.align(Alignment.CenterHorizontally),

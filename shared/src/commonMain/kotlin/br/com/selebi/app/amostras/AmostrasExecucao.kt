@@ -287,7 +287,7 @@ object AmostrasExecucao {
         anexos = listOf(foto("c1", "i1", 60 * 30), foto("c2", "i4", 60 * 26), foto("c9", null, 60 * 24, categoria = "assinatura")),
         relatorio = "/r/exemploDeLinkDoRelatorio0000000000",
         historico = listOf(
-            evento("h4", "esteira", "Projeto avançou na esteira", "para \"Documentação\"", "BBSolution", "sistema", agora.minusDays(1).withHour(16).withMinute(10)),
+            evento("h4", "esteira", "Projeto avançou na esteira", "para \"Documentação\"", "BB-Selebi", "sistema", agora.minusDays(1).withHour(16).withMinute(10)),
             evento("h3", "concluida", "Concluída", "Resolvido", "Diego Andrade", "app", agora.minusDays(1).withHour(16).withMinute(10)),
             evento("h2", "iniciada", "Atendimento iniciado", null, "Diego Andrade", "app", agora.minusDays(1).withHour(8).withMinute(12)),
             evento("h1", "deslocamento", "Saiu para o local", null, "Diego Andrade", "app", agora.minusDays(1).withHour(7).withMinute(30)),

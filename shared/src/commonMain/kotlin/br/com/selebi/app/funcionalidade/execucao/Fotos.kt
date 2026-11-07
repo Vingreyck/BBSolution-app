@@ -266,7 +266,7 @@ fun VisorDeFoto(
                     ) {
                         Icon(Icons.Outlined.Videocam, contentDescription = null, modifier = Modifier.size(64.dp))
                         Text(
-                            "Vídeo gravado. Para assistir, abra a OS no site do BBSolution.",
+                            "Vídeo gravado. Para assistir, abra a OS no site do BB-Selebi.",
                             style = MaterialTheme.typography.bodyLarge,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(top = 12.dp),
@@ -293,7 +293,7 @@ fun VisorDeFoto(
                             style = MaterialTheme.typography.titleSmall,
                         )
                         Text(
-                            if (foto.pendente) "Só neste celular — sobe quando tiver sinal" else "Já está no BBSolution",
+                            if (foto.pendente) "Só neste celular — sobe quando tiver sinal" else "Já está no BB-Selebi",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.8f),
                         )

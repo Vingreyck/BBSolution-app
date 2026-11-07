@@ -61,7 +61,7 @@ targets:
     info:
       path: iosApp/Info.plist
       properties:
-        CFBundleDisplayName: BBSolution
+        CFBundleDisplayName: BB-Selebi
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSRequiresIPhoneOS: true
@@ -80,11 +80,11 @@ targets:
         UIBackgroundModes:
           - location
         NSLocationWhenInUseUsageDescription: >-
-          O BBSolution registra onde cada etapa da ordem de serviço aconteceu e,
+          O BB-Selebi registra onde cada etapa da ordem de serviço aconteceu e,
           entre o "Estou a caminho" e o fim do atendimento, mostra ao escritório
           onde você está.
         NSLocationAlwaysAndWhenInUseUsageDescription: >-
-          O BBSolution mostra ao escritório onde você está só entre o "Estou a
+          O BB-Selebi mostra ao escritório onde você está só entre o "Estou a
           caminho" e o fim do atendimento, mesmo com a tela apagada.
         NSCameraUsageDescription: >-
           A câmera tira as fotos da vistoria e lê o código de barras da etiqueta

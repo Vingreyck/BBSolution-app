@@ -758,11 +758,11 @@ fun ConteudoConcluida(estado: ExecucaoEstado, acoes: AcoesExecucao) {
                 TipoAviso.ERRO,
             )
             esperando > 0 -> Aviso(
-                if (estado.online) "Subindo para o BBSolution — pode guardar o celular." else "Está tudo guardado no celular e sobe sozinho quando o sinal voltar, mesmo com o app fechado.",
+                if (estado.online) "Subindo para o BB-Selebi — pode guardar o celular." else "Está tudo guardado no celular e sobe sozinho quando o sinal voltar, mesmo com o app fechado.",
                 TipoAviso.INFO,
                 titulo = if (estado.online) "Enviando" else "Sem sinal",
             )
-            else -> Aviso("Tudo enviado. O escritório já vê a OS concluída no site.", TipoAviso.INFO, titulo = "No BBSolution")
+            else -> Aviso("Tudo enviado. O escritório já vê a OS concluída no site.", TipoAviso.INFO, titulo = "No BB-Selebi")
         }
         estado.avisos.forEach { aviso ->
             Surface(color = c.sucessoFundo, contentColor = c.sobreSucesso, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
