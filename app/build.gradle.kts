@@ -39,7 +39,7 @@ android {
         minSdk = 26
         targetSdk = 36
         versionCode = 7
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -109,6 +109,7 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.core.splashscreen)
     implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.fragment)
     implementation(libs.kotlinx.coroutines.android)
     // Fila de envio da OS: sobe o que o técnico fez sem sinal quando a rede
     // volta, mesmo com o app fechado.

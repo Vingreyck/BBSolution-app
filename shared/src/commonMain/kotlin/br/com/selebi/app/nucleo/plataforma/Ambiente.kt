@@ -11,12 +11,12 @@ object Ambiente {
     /** O endereço da API, terminado em "/". */
     var apiUrl: String = "https://app.selebi.com.br/api/app/v1/"
 
-    var versao: String = "0.1.0"
+    var versao: String = "1.0.0"
 
     /** O número do build (o `versionCode` no Android, o `CFBundleVersion` no iPhone): é o que diz qual envio está instalado. */
     var build: String = ""
 
-    /** "0.1.0 (3)" — ou só "0.1.0" quando o build não é conhecido. */
+    /** "1.0.0 (7)" — ou só "1.0.0" quando o build não é conhecido. */
     val versaoCompleta: String get() = if (build.isBlank()) versao else "$versao ($build)"
 }
 
