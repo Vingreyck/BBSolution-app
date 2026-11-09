@@ -95,7 +95,14 @@ workflows:
       - name: Assinatura
         script: xcode-project use-profiles --project iosApp/BBSolution.xcodeproj
       - name: Compilar e empacotar
-        script: xcode-project build-ipa --project iosApp/BBSolution.xcodeproj --scheme BBSolution
+        # Se falhar, o motivo fica no log do Xcode, não na tela do passo: as
+        # linhas de erro são copiadas para cá.
+        script: |
+          xcode-project build-ipa --project iosApp/BBSolution.xcodeproj --scheme BBSolution || {
+            echo "== Erros do Xcode =="
+            grep -h -iE "error:|provisioning profile|entitlement|signing" /tmp/xcodebuild_logs/*.log | sort -u | head -40
+            exit 1
+          }
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
