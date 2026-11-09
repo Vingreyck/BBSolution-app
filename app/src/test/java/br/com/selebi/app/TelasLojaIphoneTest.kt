@@ -42,7 +42,8 @@ import org.robolectric.annotation.GraphicsMode
 
 /**
  * As capturas da App Store: as mesmas telas da Play, no tamanho que a Apple
- * exige para o iPhone de 6,9" — 430 × 932 pontos a 3x = 1290 × 2796 pixels.
+ * pede no "iPhone com Dynamic Island (tela média)", de 6,3" — 402 × 874 pontos
+ * a 3x = 1206 × 2622 pixels. (Em nov/2026 o 6,9", 1290 × 2796, deixou de ser aceito.)
  *
  *   gradlew :app:testDebugUnitTest --tests "*TelasLojaIphoneTest*"
  *
@@ -50,7 +51,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(sdk = [34], qualifiers = "w430dp-h1000dp-xxhdpi")
+@Config(sdk = [34], qualifiers = "w402dp-h950dp-xxhdpi")
 class TelasLojaIphoneTest {
 
     @get:Rule
@@ -59,7 +60,7 @@ class TelasLojaIphoneTest {
     private fun capturar(nome: String, conteudo: @Composable () -> Unit) {
         regra.setContent {
             SelebiTema(escuro = false) {
-                Box(Modifier.size(430.dp, 932.dp).testTag("captura")) { conteudo() }
+                Box(Modifier.size(402.dp, 874.dp).testTag("captura")) { conteudo() }
             }
         }
         regra.onNodeWithTag("captura").captureRoboImage("build/telas-iphone/$nome.png")
