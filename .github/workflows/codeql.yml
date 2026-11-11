@@ -1,0 +1,93 @@
+# CodeQL do app: procura falhas de segurança no código Kotlin (Android e o
+# código comum, que o iPhone também usa) a cada envio e toda segunda-feira.
+#
+# Por que não a "configuração padrão" do GitHub: ela tenta compilar o app
+# sozinha, e o build do Android exige o google-services.json — que fica fora do
+# git de propósito (é da conta do Firebase). Sem ele o build para e o Kotlin não
+# é analisado. Aqui o job escreve um google-services.json DE MENTIRA, só para
+# compilar: nenhuma chave de verdade entra no GitHub.
+#
+# O Swift fica de fora: o projeto do iPhone só monta num Mac (Codemagic), e o
+# Swift dele é só a casca que abre o código Kotlin já analisado aqui.
+#
+# DEPOIS DE ENVIAR ESTE ARQUIVO: em Settings → Code security → CodeQL analysis,
+# troque "Default" por "Advanced" (ou desligue o Default). Com os dois ligados,
+# o GitHub recusa o resultado deste arquivo.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "17 9 * * 1"
+
+# O token só lê o código e grava o resultado da análise. Nada além.
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analisar:
+    name: Analisar (${{ matrix.linguagem }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - linguagem: java-kotlin
+            modo: manual
+          - linguagem: actions
+            modo: none
+          - linguagem: javascript-typescript
+            modo: none
+    steps:
+      # Ações fixadas pelo commit (etiqueta pode ser movida por quem invadir o
+      # repositório da ação). O Dependabot atualiza o commit e o comentário.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        if: matrix.modo == 'manual'
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          languages: ${{ matrix.linguagem }}
+          build-mode: ${{ matrix.modo }}
+          queries: security-extended
+
+      - name: google-services.json de mentira (só para compilar)
+        if: matrix.modo == 'manual'
+        run: |
+          cat > app/google-services.json <<'JSON'
+          {
+            "project_info": { "project_number": "000000000000", "project_id": "selebi-ci", "storage_bucket": "selebi-ci.appspot.com" },
+            "client": [
+              {
+                "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000000", "android_client_info": { "package_name": "br.com.selebi.app" } },
+                "oauth_client": [], "api_key": [{ "current_key": "ci-sem-chave" }], "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              },
+              {
+                "client_info": { "mobilesdk_app_id": "1:000000000000:android:0000000000000001", "android_client_info": { "package_name": "br.com.selebi.app.debug" } },
+                "oauth_client": [], "api_key": [{ "current_key": "ci-sem-chave" }], "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+
+      - name: Compilar o Kotlin (Android + código comum)
+        if: matrix.modo == 'manual'
+        run: ./gradlew :app:compileDebugKotlin --no-daemon --stacktrace
+
+      - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4.39.1
+        with:
+          category: /language:${{ matrix.linguagem }}

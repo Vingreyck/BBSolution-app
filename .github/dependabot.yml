@@ -1,0 +1,41 @@
+# Dependabot: vigia as bibliotecas do app (Android e iPhone, Kotlin Multiplatform).
+#
+# O alerta e a correção de segurança vêm das configurações do repositório e
+# chegam na hora. Este arquivo cuida da atualização de rotina: toda segunda,
+# uma proposta por biblioteca, com 7 dias de espera para versão nova (30 para
+# versão maior) — tempo para uma versão infectada ser descoberta e retirada
+# antes de chegar ao app. A espera não vale para correção de segurança.
+#
+# O Gradle é lido de gradle/libs.versions.toml e dos build.gradle.kts.
+# Sem "groups" de propósito: com "*", a espera deixa de valer por biblioteca.
+
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Maceio
+    cooldown:
+      default-days: 7
+      semver-major-days: 30
+    open-pull-requests-limit: 5
+    labels: [dependencias]
+    commit-message:
+      prefix: "deps"
+
+  # As ações do GitHub do .github/workflows/codeql.yml, fixadas por commit.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: America/Maceio
+    cooldown:
+      default-days: 7
+    labels: [dependencias]
+    commit-message:
+      prefix: "deps"
