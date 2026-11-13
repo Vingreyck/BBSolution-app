@@ -13,19 +13,42 @@ import br.com.selebi.app.nucleo.util.codificarUrl
  */
 object AcoesOs {
 
-    /** Coordenada da usina quando existe (chega na porta); senão, o endereço. */
+    /** Coordenada da usina quando é confiável (chega na porta); senão, o endereço do cliente. */
     fun abrirRota(externas: AcoesExternas, ordem: Ordem): Boolean {
-        val usina = ordem.usina
-        val destino = if (usina?.latitude != null && usina.longitude != null) {
-            "${usina.latitude},${usina.longitude}"
-        } else {
-            // Texto puro para o mapa: "Rua X, 12, Centro, Itabaiana, SE".
-            listOfNotNull(ordem.cliente.endereco?.replace(" · ", ", "), ordem.cliente.cidade, ordem.cliente.uf)
-                .joinToString(", ")
-        }
+        val destino = destinoDaRota(ordem)
         if (destino.isBlank()) return false
         return externas.abrirMapa(destino)
     }
+
+    /**
+     * O que o mapa recebe como destino.
+     *
+     * A coordenada só vale dentro do Brasil e fora do "0,0" que o portal manda
+     * quando não sabe. O endereço sai em texto puro, do jeito que o Google entende:
+     * "Rua X, 12, Centro, Itabaiana, SE, Brasil", sem o " · " do envelope e sem o
+     * "S/N", que só faz o pino cair no meio da rua.
+     */
+    fun destinoDaRota(ordem: Ordem): String {
+        val usina = ordem.usina
+        val latitude = usina?.latitude
+        val longitude = usina?.longitude
+        if (latitude != null && longitude != null && coordenadaValida(latitude, longitude)) {
+            return "$latitude,$longitude"
+        }
+        val rua = ordem.cliente.endereco
+            ?.replace(" · ", ", ")
+            ?.replace(Regex(",\\s*[sS]\\s*/?\\s*[nN]\\b"), "")
+            ?.trim()
+        val partes = listOfNotNull(rua, ordem.cliente.cidade, ordem.cliente.uf)
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+        return if (partes.isEmpty()) "" else (partes + "Brasil").joinToString(", ")
+    }
+
+    private fun coordenadaValida(latitude: Double, longitude: Double): Boolean =
+        !(latitude == 0.0 && longitude == 0.0) &&
+            latitude in -34.0..6.0 &&
+            longitude in -74.0..-34.0
 
     fun ligar(externas: AcoesExternas, telefone: String): Boolean = externas.discar(telefone)
 

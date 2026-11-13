@@ -114,7 +114,8 @@ private object AcoesExternasIos : AcoesExternas {
     override fun discar(telefone: String): Boolean = abrir("tel:" + telefone.filter { it.isDigit() || it == '+' })
 
     /** O Mapas da Apple, com a rota até o destino (de lá o técnico pode passar para o Google Maps ou o Waze). */
-    override fun abrirMapa(destino: String): Boolean = abrir("https://maps.apple.com/?daddr=" + codificarUrl(destino))
+    override fun abrirMapa(destino: String): Boolean =
+        abrir("https://maps.apple.com/?dirflg=d&daddr=" + codificarUrl(destino))
 
     override fun compartilhar(texto: String, titulo: String): Boolean {
         val topo = telaDoTopo() ?: return false

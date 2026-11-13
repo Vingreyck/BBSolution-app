@@ -51,13 +51,19 @@ private class AcoesExternasAndroid(private val contexto: Context) : AcoesExterna
 
     override fun discar(telefone: String): Boolean = abrir(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$telefone")))
 
+    /**
+     * Abre o Google Maps já com a **rota** traçada, saindo de onde o técnico está.
+     *
+     * Antes era `geo:0,0?q=`, que é uma busca: o mapa só marcava um ponto e o
+     * técnico tinha que tocar em "Como chegar". O endereço de rota é o `dir`.
+     * Tenta o app do Maps direto; sem ele, o navegador; por último, o `geo:`.
+     */
     override fun abrirMapa(destino: String): Boolean {
+        val rota = Uri.parse("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=" + Uri.encode(destino))
+        val noMaps = Intent(Intent.ACTION_VIEW, rota).setPackage("com.google.android.apps.maps")
+        val noNavegador = Intent(Intent.ACTION_VIEW, rota)
         val geo = Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=" + Uri.encode(destino)))
-        val web = Intent(
-            Intent.ACTION_VIEW,
-            Uri.parse("https://www.google.com/maps/search/?api=1&query=" + Uri.encode(destino)),
-        )
-        return abrir(geo) || abrir(web)
+        return abrir(noMaps) || abrir(noNavegador) || abrir(geo)
     }
 
     override fun compartilhar(texto: String, titulo: String): Boolean {
