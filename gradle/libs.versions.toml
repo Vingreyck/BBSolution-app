@@ -30,7 +30,7 @@ coroutines = "1.10.2"
 kotlinxDatetime = "0.7.1"
 # A mesma que o Ktor usa por baixo: arquivos e bytes nos dois sistemas.
 kotlinxIo = "0.8.0"
-tink = "1.17.0"
+tink = "1.24.0"
 junit = "4.13.2"
 robolectric = "4.14.1"
 roborazzi = "1.43.1"
