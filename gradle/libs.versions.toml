@@ -1,7 +1,7 @@
 [versions]
 # O AGP fica no que o Android Studio Meerkat (2024.3) suporta; subir além disto
 # exige atualizar a IDE antes.
-agp = "8.9.1"
+agp = "9.5.1"
 # O Kotlin precisa compilar para o iPhone com o Xcode 26, que a Apple exige
 # para aceitar envio à App Store desde abril de 2026. Abaixo da 2.2.20 não dá.
 kotlin = "2.2.21"
