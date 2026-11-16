@@ -8,7 +8,7 @@ kotlin = "2.2.21"
 ksp = "2.2.21-2.0.4"
 # Compose Multiplatform: as telas do Android e do iPhone saem do mesmo código.
 # A 1.9.3 é o Compose 1.9 do Google por baixo, no Android.
-composeMultiplatform = "1.9.3"
+composeMultiplatform = "1.12.2"
 composeMaterial3 = "1.9.0"
 composeIcones = "1.7.3"
 jbLifecycle = "2.9.6"
